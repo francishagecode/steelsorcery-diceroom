@@ -61,7 +61,7 @@ peerColors[selfId] = myColor
 // Load available textures and populate dropdown
 async function loadTextures() {
   try {
-    const response = await fetch('/textures.json')
+    const response = await fetch('./textures.json')
     const textures = await response.json()
     const textureSelect = document.querySelector('#texture-select')
 
