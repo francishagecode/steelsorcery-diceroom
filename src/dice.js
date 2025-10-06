@@ -22,7 +22,7 @@ export async function initDiceBox(color, initialConfig = {}) {
   diceConfig = {...diceConfig, ...initialConfig}
 
   diceBox = new DiceBox('#dice-box-container', {
-    assetPath: '/assets/dice-box-assets',
+    assetPath: '/',
     theme_customColorset: {
       background: color,
       foreground: diceConfig.labelColor,

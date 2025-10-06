@@ -1,4 +1,4 @@
-import {joinRoom, selfId} from 'trystero/mqtt'
+import {joinRoom, selfId} from 'trystero/torrent'
 
 const canvas = document.querySelector('#canvas')
 const rollHistory = document.querySelector('#roll-history')

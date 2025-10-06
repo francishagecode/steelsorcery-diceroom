@@ -22,7 +22,7 @@
     "serve": "^14.2.4"
   },
   "scripts": {
-    "build": "rollup -c && cp index.html dist/index.html && cp -r assets dist/",
-    "dev": "npx serve . -p 3000"
+    "build": "rollup -c && cp index.html docs/index.html && cp -r assets/dice-box-assets/* docs/ && cp -r assets/*.otf docs/assets/ && cp -r assets/images docs/assets/",
+    "dev": "npx serve docs -p 3000"
   }
 }
