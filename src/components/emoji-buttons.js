@@ -12,15 +12,24 @@ class EmojiButtons extends HTMLElement {
       btn.addEventListener('click', (e) => {
         const emoji = btn.dataset.emoji
 
-        // Calculate button position for confetti origin
-        const rect = btn.getBoundingClientRect()
-        const x = (rect.left + rect.width / 2) / window.innerWidth
-        const y = (rect.top + rect.height / 2) / window.innerHeight
+        // Emit confetti from this button's position
+        this.triggerEmojiConfetti(emoji)
 
-        emitEmojiConfetti(emoji, x, y)
+        // Broadcast just the emoji to other clients
         broadcastEmoji(emoji)
       })
     })
+  }
+
+  // Trigger confetti from the button position for this emoji
+  triggerEmojiConfetti(emoji) {
+    const button = this.querySelector(`[data-emoji="${emoji}"]`)
+    if (button) {
+      const rect = button.getBoundingClientRect()
+      const x = (rect.left + rect.width / 2) / window.innerWidth
+      const y = (rect.top + rect.height / 2) / window.innerHeight
+      emitEmojiConfetti(emoji, x, y)
+    }
   }
 }
 

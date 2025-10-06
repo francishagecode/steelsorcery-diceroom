@@ -72,7 +72,14 @@ export function initRoom(roomName, onRollReceived) {
   })
   getMove(moveCursor)
   getEmoji(emoji => {
-    emitEmojiConfetti(emoji)
+    // Find the emoji button on this client and trigger confetti from its position
+    const emojiButtons = document.querySelector('emoji-buttons')
+    if (emojiButtons && emojiButtons.triggerEmojiConfetti) {
+      emojiButtons.triggerEmojiConfetti(emoji)
+    } else {
+      // Fallback to random position if button not found
+      emitEmojiConfetti(emoji)
+    }
   })
 
   return {sendRoll, sendName, sendMove, sendColor, sendEmoji}
@@ -168,8 +175,8 @@ export function moveCursor([x, y], id) {
   const el = cursors[id]
 
   if (el && typeof x === 'number' && typeof y === 'number') {
-    el.style.left = x * innerWidth + 'px'
-    el.style.top = y * innerHeight + 'px'
+    el.style.left = x * window.innerWidth + 'px'
+    el.style.top = y * window.innerHeight + 'px'
   }
 }
 
