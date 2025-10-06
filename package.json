@@ -1,0 +1,28 @@
+{
+  "name": "steel-sorcery-diceroom",
+  "version": "1.0.0",
+  "description": "Serverless multiplayer dice rolling app built with Trystero",
+  "type": "module",
+  "author": {
+    "name": "Francis Hage",
+    "url": "https://github.com/francishagecode"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@3d-dice/dice-box-threejs": "^0.0.6",
+    "trystero": "^0.21.8"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.2",
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-replace": "^6.0.2",
+    "@rollup/plugin-terser": "^0.4.4",
+    "prettier": "^3.5.2",
+    "rollup": "^4.49.0",
+    "serve": "^14.2.4"
+  },
+  "scripts": {
+    "build": "rollup -c && cp index.html dist/index.html && cp -r assets dist/",
+    "dev": "npx serve . -p 3000"
+  }
+}

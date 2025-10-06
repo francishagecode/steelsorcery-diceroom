@@ -1,0 +1,10 @@
+dist/
+docs/
+scripts/
+test/
+test-results/
+.gitignore
+.prettierrc
+eslint.config.js
+playwright.config.js
+rollup.config.js
