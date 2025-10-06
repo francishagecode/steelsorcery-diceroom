@@ -248,59 +248,6 @@ export function displayRollInHistory(rollData, peerId) {
     diceContainer.appendChild(die)
   })
 
-  // MEGA CONFETTI for natural 20!
-  const hasNat20 = results.some(r => r.sides === 20 && r.value === 20)
-  if (hasNat20) {
-    setTimeout(() => {
-      const duration = 3000
-      const animationEnd = Date.now() + duration
-      const defaults = {
-        startVelocity: 30,
-        spread: 360,
-        ticks: 60,
-        zIndex: 0,
-        colors: ['#ffffff', '#f5f5f5', '#ffd700', '#ffed4e']
-      }
-
-      function randomInRange(min, max) {
-        return Math.random() * (max - min) + min
-      }
-
-      const interval = setInterval(function () {
-        const timeLeft = animationEnd - Date.now()
-
-        if (timeLeft <= 0) {
-          return clearInterval(interval)
-        }
-
-        const particleCount = 50 * (timeLeft / duration)
-
-        confetti(
-          Object.assign({}, defaults, {
-            particleCount,
-            origin: {x: randomInRange(0.1, 0.3), y: Math.random() - 0.2}
-          })
-        )
-        confetti(
-          Object.assign({}, defaults, {
-            particleCount,
-            origin: {x: randomInRange(0.7, 0.9), y: Math.random() - 0.2}
-          })
-        )
-      }, 250)
-
-      confetti({
-        particleCount: 200,
-        spread: 160,
-        origin: {x: 0.5, y: 0.5},
-        colors: ['#ffffff', '#f5f5f5', '#ffd700', '#ffed4e'],
-        scalar: 1.5,
-        gravity: 1,
-        ticks: 300
-      })
-    }, 150)
-  }
-
   rollEl.appendChild(header)
   rollEl.appendChild(diceContainer)
 
