@@ -64,13 +64,24 @@ export async function reinitializeDiceBox(color) {
 
 let currentDiceColor = null
 
-export async function roll3DDice(rollData, color, strength = 11) {
+export async function roll3DDice(rollData, color, strength = 11, settings = {}) {
   if (!diceBox) return
 
-  const needsReinit = currentDiceColor !== color || diceConfig.strength !== strength
+  const newSettings = {
+    texture: settings.texture || diceConfig.texture,
+    material: settings.material || diceConfig.material,
+    labelColor: settings.labelColor || diceConfig.labelColor
+  }
+
+  const needsReinit =
+    currentDiceColor !== color ||
+    diceConfig.strength !== strength ||
+    diceConfig.texture !== newSettings.texture ||
+    diceConfig.material !== newSettings.material ||
+    diceConfig.labelColor !== newSettings.labelColor
 
   if (needsReinit) {
-    diceConfig.strength = strength
+    diceConfig = {...diceConfig, ...newSettings, strength}
     await reinitializeDiceBox(color)
     currentDiceColor = color
   }

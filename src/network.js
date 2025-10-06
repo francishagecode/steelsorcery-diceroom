@@ -8,6 +8,7 @@ export {selfId}
 
 export const peerNames = {}
 export const peerColors = {}
+export const peerDiceSettings = {} // Store texture, material, labelColor per peer
 const cursors = {}
 
 let room = null
@@ -16,6 +17,7 @@ let sendName = null
 let sendMove = null
 let sendColor = null
 let sendEmoji = null
+let sendDiceSettings = null
 
 const config = {
   appId: 'steel-sorcery-diceroom'
@@ -23,7 +25,7 @@ const config = {
 
 // Initialize room and setup peer handlers
 export function initRoom(roomName, onRollReceived) {
-  let getRoll, getName, getMove, getColor, getEmoji
+  let getRoll, getName, getMove, getColor, getEmoji, getDiceSettings
 
   room = joinRoom(config, roomName)
   ;[sendRoll, getRoll] = room.makeAction('diceRoll')
@@ -31,12 +33,16 @@ export function initRoom(roomName, onRollReceived) {
   ;[sendMove, getMove] = room.makeAction('mouseMove')
   ;[sendColor, getColor] = room.makeAction('playerColor')
   ;[sendEmoji, getEmoji] = room.makeAction('emoji')
+  ;[sendDiceSettings, getDiceSettings] = room.makeAction('diceSettings')
 
   document.querySelector('#room-num').innerText = `Room: ${roomName}`
 
   room.onPeerJoin(peerId => {
     sendName(peerNames[selfId], peerId)
     sendColor(peerColors[selfId], peerId)
+    if (peerDiceSettings[selfId]) {
+      sendDiceSettings(peerDiceSettings[selfId], peerId)
+    }
     addCursor(peerId)
     if (sendMove) {
       sendMove([Math.random() * 0.93, Math.random() * 0.93], peerId)
@@ -47,6 +53,7 @@ export function initRoom(roomName, onRollReceived) {
   room.onPeerLeave(peerId => {
     delete peerNames[peerId]
     delete peerColors[peerId]
+    delete peerDiceSettings[peerId]
     removeCursor(peerId)
     updatePeerCount()
   })
@@ -70,6 +77,9 @@ export function initRoom(roomName, onRollReceived) {
       }
     }
   })
+  getDiceSettings((settings, peerId) => {
+    peerDiceSettings[peerId] = settings
+  })
   getMove(moveCursor)
   getEmoji(emoji => {
     // Find the emoji button on this client and trigger confetti from its position
@@ -82,7 +92,7 @@ export function initRoom(roomName, onRollReceived) {
     }
   })
 
-  return {sendRoll, sendName, sendMove, sendColor, sendEmoji}
+  return {sendRoll, sendName, sendMove, sendColor, sendEmoji, sendDiceSettings}
 }
 
 // Shared emoji confetti function
@@ -138,6 +148,12 @@ export function broadcastColor(color) {
 export function broadcastEmoji(emoji) {
   if (sendEmoji) {
     sendEmoji(emoji)
+  }
+}
+
+export function broadcastDiceSettings(settings) {
+  if (sendDiceSettings) {
+    sendDiceSettings(settings)
   }
 }
 

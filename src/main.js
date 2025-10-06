@@ -3,13 +3,15 @@ import {
   selfId,
   peerNames,
   peerColors,
+  peerDiceSettings,
   addCursor,
   moveCursor,
   displayRollInHistory,
   broadcastRoll,
   broadcastName,
   broadcastMove,
-  broadcastColor
+  broadcastColor,
+  broadcastDiceSettings
 } from './network.js'
 import {
   pool,
@@ -57,6 +59,11 @@ let myTexture = localStorage.getItem('texture') || ''
 
 peerNames[selfId] = myName
 peerColors[selfId] = myColor
+peerDiceSettings[selfId] = {
+  texture: myTexture,
+  material: myMaterial,
+  labelColor: myLabelColor
+}
 
 // Load available textures and populate dropdown
 async function loadTextures() {
@@ -101,7 +108,8 @@ await initDiceBox(myColor, {
 async function handleIncomingRoll(rollData, peerId) {
   const rollerColor = peerColors[peerId] || '#ffffff'
   const strength = rollData.strength || 11
-  await roll3DDice(rollData, rollerColor, strength)
+  const settings = peerDiceSettings[peerId] || {}
+  await roll3DDice(rollData, rollerColor, strength, settings)
   displayRollInHistory(rollData, peerId)
 }
 
@@ -225,7 +233,9 @@ document
   .addEventListener('change', async e => {
     myLabelColor = e.target.value
     localStorage.setItem('labelColor', myLabelColor)
+    peerDiceSettings[selfId].labelColor = myLabelColor
     await updateDiceConfig({labelColor: myLabelColor}, myColor)
+    broadcastDiceSettings(peerDiceSettings[selfId])
   })
 
 document
@@ -233,7 +243,9 @@ document
   .addEventListener('change', async e => {
     myMaterial = e.target.value
     localStorage.setItem('material', myMaterial)
+    peerDiceSettings[selfId].material = myMaterial
     await updateDiceConfig({material: myMaterial}, myColor)
+    broadcastDiceSettings(peerDiceSettings[selfId])
   })
 
 document
@@ -241,5 +253,7 @@ document
   .addEventListener('change', async e => {
     myTexture = e.target.value
     localStorage.setItem('texture', myTexture)
+    peerDiceSettings[selfId].texture = myTexture
     await updateDiceConfig({texture: myTexture}, myColor)
+    broadcastDiceSettings(peerDiceSettings[selfId])
   })
