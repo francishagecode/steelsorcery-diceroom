@@ -9,7 +9,7 @@ const nodeEnv = '"production"'
 export default {
   input: 'src/main.js',
   output: {
-    file: 'docs/bundle.js',
+    file: 'dist/bundle.js',
     format: 'es',
     compact: true,
     inlineDynamicImports: true
