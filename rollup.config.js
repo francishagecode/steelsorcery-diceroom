@@ -1,6 +1,6 @@
 import commonJs from '@rollup/plugin-commonjs'
-import replace from '@rollup/plugin-replace'
 import resolve from '@rollup/plugin-node-resolve'
+import replace from '@rollup/plugin-replace'
 import terser from '@rollup/plugin-terser'
 
 const ecma = 2019
@@ -12,15 +12,15 @@ export default {
     file: 'docs/bundle.js',
     format: 'es',
     compact: true,
-    inlineDynamicImports: true
+    inlineDynamicImports: true,
   },
   plugins: [
-    resolve({browser: true, preferBuiltins: false}),
+    resolve({ browser: true, preferBuiltins: false }),
     commonJs(),
     replace({
       'process.env.NODE_ENV': nodeEnv,
       'process?.env?.NODE_ENV': nodeEnv,
-      preventAssignment: true
+      preventAssignment: true,
     }),
     terser({
       compress: {
@@ -33,10 +33,10 @@ export default {
         unsafe_arrows: true,
         unsafe_methods: true,
         unsafe_proto: true,
-        unsafe_symbols: true
+        unsafe_symbols: true,
       },
-      format: {comments: false, ecma},
-      mangle: {module: true, toplevel: true}
-    })
-  ]
+      format: { comments: false, ecma },
+      mangle: { module: true, toplevel: true },
+    }),
+  ],
 }

@@ -1,10 +1,10 @@
-import {joinRoom, selfId} from 'trystero/torrent'
+import { joinRoom, selfId } from 'trystero/torrent'
 
 const canvas = document.querySelector('#canvas')
 const rollHistory = document.querySelector('#roll-history')
 const peerCountEl = document.querySelector('#peer-count')
 
-export {selfId}
+export { selfId }
 
 export const peerNames = {}
 export const peerColors = {}
@@ -20,7 +20,7 @@ let sendEmoji = null
 let sendDiceSettings = null
 
 const config = {
-  appId: 'steel-sorcery-diceroom'
+  appId: 'steel-sorcery-diceroom',
 }
 
 // Initialize room and setup peer handlers
@@ -37,7 +37,7 @@ export function initRoom(roomName, onRollReceived) {
 
   document.querySelector('#room-num').innerText = `Room: ${roomName}`
 
-  room.onPeerJoin(peerId => {
+  room.onPeerJoin((peerId) => {
     sendName(peerNames[selfId], peerId)
     sendColor(peerColors[selfId], peerId)
     if (peerDiceSettings[selfId]) {
@@ -50,7 +50,7 @@ export function initRoom(roomName, onRollReceived) {
     updatePeerCount()
   })
 
-  room.onPeerLeave(peerId => {
+  room.onPeerLeave((peerId) => {
     delete peerNames[peerId]
     delete peerColors[peerId]
     delete peerDiceSettings[peerId]
@@ -81,10 +81,10 @@ export function initRoom(roomName, onRollReceived) {
     peerDiceSettings[peerId] = settings
   })
   getMove(moveCursor)
-  getEmoji(emoji => {
+  getEmoji((emoji) => {
     // Find the emoji button on this client and trigger confetti from its position
     const emojiButtons = document.querySelector('emoji-buttons')
-    if (emojiButtons && emojiButtons.triggerEmojiConfetti) {
+    if (emojiButtons?.triggerEmojiConfetti) {
       emojiButtons.triggerEmojiConfetti(emoji)
     } else {
       // Fallback to random position if button not found
@@ -92,7 +92,7 @@ export function initRoom(roomName, onRollReceived) {
     }
   })
 
-  return {sendRoll, sendName, sendMove, sendColor, sendEmoji, sendDiceSettings}
+  return { sendRoll, sendName, sendMove, sendColor, sendEmoji, sendDiceSettings }
 }
 
 // Shared emoji confetti function
@@ -100,8 +100,8 @@ export function emitEmojiConfetti(emoji, x, y) {
   // If no position provided, use random position for peer reactions
   const origin =
     x !== undefined && y !== undefined
-      ? {x, y}
-      : {x: Math.random() * 0.8 + 0.1, y: Math.random() * 0.5 + 0.4}
+      ? { x, y }
+      : { x: Math.random() * 0.8 + 0.1, y: Math.random() * 0.5 + 0.4 }
 
   confetti({
     particleCount: 3,
@@ -115,9 +115,9 @@ export function emitEmojiConfetti(emoji, x, y) {
     shapes: ['emoji'],
     shapeOptions: {
       emoji: {
-        value: [emoji]
-      }
-    }
+        value: [emoji],
+      },
+    },
   })
 }
 
@@ -170,11 +170,11 @@ export function addCursor(id, isSelf = false) {
   img.style.imageRendering = 'pixelated'
   txt.className = `text-center text-sm font-bold px-2 py-1 rounded-lg shadow-lg ${isSelf ? 'bg-white/90 text-black' : 'bg-black/90 text-white'}`
   txt.innerText = peerNames[id] || id.slice(0, 4)
-  
+
   if (!isSelf) {
     txt.style.borderLeft = `3px solid ${peerColors[id] || '#ffffff'}`
   }
-  
+
   el.appendChild(img)
   el.appendChild(txt)
   el.id = `cursor-${id}`
@@ -195,8 +195,8 @@ export function moveCursor([x, y], id) {
   const el = cursors[id]
 
   if (el && typeof x === 'number' && typeof y === 'number') {
-    el.style.left = x * window.innerWidth + 'px'
-    el.style.top = y * window.innerHeight + 'px'
+    el.style.left = `${x * window.innerWidth}px`
+    el.style.top = `${y * window.innerHeight}px`
   }
 }
 
@@ -212,7 +212,7 @@ function updatePeerCount() {
 
 // Roll history display
 export function displayRollInHistory(rollData, peerId) {
-  const {results, total, timestamp} = rollData
+  const { results, total, timestamp } = rollData
   const playerName = peerNames[peerId] || peerId.slice(0, 8)
   const isYou = peerId === selfId
 
@@ -258,7 +258,7 @@ export function displayRollInHistory(rollData, peerId) {
   const diceContainer = document.createElement('div')
   diceContainer.className = 'flex gap-1 sm:gap-1.5 flex-wrap'
 
-  results.forEach(result => {
+  results.forEach((result) => {
     const die = document.createElement('span')
     const diceColors = {
       4: 'bg-dice-4 text-black border-black',
@@ -266,7 +266,7 @@ export function displayRollInHistory(rollData, peerId) {
       8: 'bg-dice-8 text-white border-black',
       10: 'bg-dice-10 text-white border-black',
       12: 'bg-dice-12 text-black border-black',
-      20: 'bg-dice-20 text-black border-black'
+      20: 'bg-dice-20 text-black border-black',
     }
     die.className = `min-w-[50px] sm:min-w-[55px] lg:min-w-[60px] h-[50px] sm:h-[55px] lg:h-[60px] px-3 sm:px-4 flex items-center justify-center text-xl sm:text-2xl font-bold rounded-lg shadow-[0_4px_6px_rgb(0_0_0/0.3)] relative border-2 sm:border-[3px] ${diceColors[result.sides]}`
     die.textContent = result.value

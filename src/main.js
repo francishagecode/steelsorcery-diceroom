@@ -1,17 +1,16 @@
 import {
+  addCursor,
+  broadcastColor,
+  broadcastDiceSettings,
+  broadcastMove,
+  broadcastName,
+  displayRollInHistory,
   initRoom,
-  selfId,
-  peerNames,
+  moveCursor,
   peerColors,
   peerDiceSettings,
-  addCursor,
-  moveCursor,
-  displayRollInHistory,
-  broadcastRoll,
-  broadcastName,
-  broadcastMove,
-  broadcastColor,
-  broadcastDiceSettings
+  peerNames,
+  selfId,
 } from './network.js'
 import './emoji-buttons.js'
 import './dice-pool.js'
@@ -23,13 +22,12 @@ console.log('=== MAIN.JS STARTED, IMPORTS COMPLETE ===')
 const roomId = window.location.hash.slice(1) || 'main'
 console.log('Room ID:', roomId)
 
-const defaultColors = ['#dc143c', '#ffd700', '#4169e1', '#32cd32']
+const _defaultColors = ['#dc143c', '#ffd700', '#4169e1', '#32cd32']
 
 let myName = localStorage.getItem('playerName')
 if (!myName) {
   const playerName = prompt('Enter your name:')
-  myName =
-    playerName && playerName.trim() ? playerName.trim() : selfId.slice(0, 8)
+  myName = playerName?.trim() ? playerName.trim() : selfId.slice(0, 8)
   localStorage.setItem('playerName', myName)
 }
 
@@ -43,14 +41,13 @@ peerColors[selfId] = settings.color
 peerDiceSettings[selfId] = {
   texture: settings.texture,
   material: settings.material,
-  labelColor: settings.labelColor
+  labelColor: settings.labelColor,
 }
-
 
 await diceBoxEl.initialize(settings.color, {
   labelColor: settings.labelColor,
   material: settings.material,
-  texture: settings.texture
+  texture: settings.texture,
 })
 
 async function handleIncomingRoll(rollData, peerId) {
@@ -75,9 +72,7 @@ try {
 }
 
 // Create new room button
-document
-  .querySelector('#create-room-btn')
-  .addEventListener('click', createNewRoom)
+document.querySelector('#create-room-btn').addEventListener('click', createNewRoom)
 
 function createNewRoom() {
   const roomName = prompt('Enter a name for your new room:')
@@ -113,7 +108,7 @@ function simpleMD5Hash(str) {
 
 document.querySelector('#name-btn').addEventListener('click', () => {
   const newName = prompt('Enter your name:', myName)
-  if (newName && newName.trim()) {
+  if (newName?.trim()) {
     myName = newName.trim()
     peerNames[selfId] = myName
     localStorage.setItem('playerName', myName)
@@ -130,49 +125,49 @@ document.querySelector('#name-btn').addEventListener('click', () => {
   }
 })
 
-diceSettingsEl.addEventListener('color-change', async e => {
-  const {color} = e.detail
+diceSettingsEl.addEventListener('color-change', async (e) => {
+  const { color } = e.detail
   peerColors[selfId] = color
 
   await diceBoxEl.reinitialize(color)
   broadcastColor(color)
 })
 
-addEventListener('mousemove', ({clientX, clientY}) => {
+addEventListener('mousemove', ({ clientX, clientY }) => {
   const x = clientX / innerWidth
   const y = clientY / innerHeight
   moveCursor([x, y], selfId)
   broadcastMove([x, y])
 })
 
-addEventListener('touchmove', e => {
+addEventListener('touchmove', (e) => {
   const x = e.touches[0].clientX / innerWidth
   const y = e.touches[0].clientY / innerHeight
   moveCursor([x, y], selfId)
   broadcastMove([x, y])
 })
 
-diceSettingsEl.addEventListener('label-color-change', async e => {
-  const {labelColor} = e.detail
+diceSettingsEl.addEventListener('label-color-change', async (e) => {
+  const { labelColor } = e.detail
   peerDiceSettings[selfId].labelColor = labelColor
   const currentSettings = diceSettingsEl.getSettings()
-  await diceBoxEl.updateConfig({labelColor}, currentSettings.color)
+  await diceBoxEl.updateConfig({ labelColor }, currentSettings.color)
   broadcastDiceSettings(peerDiceSettings[selfId])
 })
 
-diceSettingsEl.addEventListener('material-change', async e => {
-  const {material} = e.detail
+diceSettingsEl.addEventListener('material-change', async (e) => {
+  const { material } = e.detail
   peerDiceSettings[selfId].material = material
   const currentSettings = diceSettingsEl.getSettings()
-  await diceBoxEl.updateConfig({material}, currentSettings.color)
+  await diceBoxEl.updateConfig({ material }, currentSettings.color)
   broadcastDiceSettings(peerDiceSettings[selfId])
 })
 
-diceSettingsEl.addEventListener('texture-change', async e => {
-  const {texture} = e.detail
+diceSettingsEl.addEventListener('texture-change', async (e) => {
+  const { texture } = e.detail
   peerDiceSettings[selfId].texture = texture
   const currentSettings = diceSettingsEl.getSettings()
-  await diceBoxEl.updateConfig({texture}, currentSettings.color)
+  await diceBoxEl.updateConfig({ texture }, currentSettings.color)
   broadcastDiceSettings(peerDiceSettings[selfId])
 })
 

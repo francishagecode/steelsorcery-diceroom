@@ -13,16 +13,23 @@
     "trystero": "^0.21.8"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.2.5",
     "@rollup/plugin-commonjs": "^28.0.2",
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@rollup/plugin-replace": "^6.0.2",
     "@rollup/plugin-terser": "^0.4.4",
-    "prettier": "^3.5.2",
+    "prettier": "^3.6.2",
     "rollup": "^4.49.0",
     "serve": "^14.2.4"
   },
   "scripts": {
     "build": "rollup -c && cp index.html docs/index.html && cp -r assets/dice-box-assets/* docs/ && cp -r assets/*.otf docs/assets/ && cp -r assets/images docs/assets/",
-    "dev": "npx serve docs -p 3000"
+    "dev": "npx serve docs -p 3000",
+    "format": "biome format --write . && prettier --write '**/*.html'",
+    "format:js": "biome format --write .",
+    "format:html": "prettier --write '**/*.html'",
+    "lint": "biome lint --write .",
+    "check": "biome check --write .",
+    "ci": "biome ci ."
   }
 }

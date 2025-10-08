@@ -12,12 +12,12 @@ export class DiceBoxComponent extends HTMLElement {
       strength: 11,
       labelColor: '#ffffff',
       outlineColor: '#000000',
-      soundsSurface: 'wood_tray'
+      soundsSurface: 'wood_tray',
     }
   }
 
   async initialize(color, initialConfig = {}) {
-    this.diceConfig = {...this.diceConfig, ...initialConfig}
+    this.diceConfig = { ...this.diceConfig, ...initialConfig }
     await this.initializeDiceBox(color)
   }
 
@@ -29,7 +29,7 @@ export class DiceBoxComponent extends HTMLElement {
         foreground: this.diceConfig.labelColor,
         outline: this.diceConfig.outlineColor,
         texture: this.diceConfig.texture,
-        material: this.diceConfig.material
+        material: this.diceConfig.material,
       },
       light_intensity: 1,
       gravity_multiplier: this.diceConfig.gravity,
@@ -38,27 +38,29 @@ export class DiceBoxComponent extends HTMLElement {
       soundsSurface: this.diceConfig.soundsSurface,
       soundsVolume: this.diceConfig.soundsVolume,
       shadows: false,
-      onRollComplete: results => {
+      onRollComplete: (results) => {
         console.log('Roll complete:', results)
-      }
+      },
     }
 
     this.diceBox = new DiceBox('#dice-box-container', config)
 
-    await this.diceBox.initialize().catch(err => {
+    await this.diceBox.initialize().catch((err) => {
       console.error('DiceBox initialization failed:', err)
     })
   }
 
   async updateConfig(config, color) {
-    this.diceConfig = {...this.diceConfig, ...config}
+    this.diceConfig = { ...this.diceConfig, ...config }
     await this.reinitialize(color)
     this.currentDiceColor = color
   }
 
   async reinitialize(color) {
     const canvases = this.querySelectorAll('canvas')
-    canvases.forEach(canvas => canvas.remove())
+    canvases.forEach((canvas) => {
+      canvas.remove()
+    })
     await this.initializeDiceBox(color)
   }
 
@@ -68,7 +70,7 @@ export class DiceBoxComponent extends HTMLElement {
     const newSettings = {
       texture: settings.texture || this.diceConfig.texture,
       material: settings.material || this.diceConfig.material,
-      labelColor: settings.labelColor || this.diceConfig.labelColor
+      labelColor: settings.labelColor || this.diceConfig.labelColor,
     }
 
     const needsReinit =
@@ -79,23 +81,16 @@ export class DiceBoxComponent extends HTMLElement {
       this.diceConfig.labelColor !== newSettings.labelColor
 
     if (needsReinit) {
-      this.diceConfig = {...this.diceConfig, ...newSettings, strength}
+      this.diceConfig = { ...this.diceConfig, ...newSettings, strength }
       await this.reinitialize(color)
       this.currentDiceColor = color
     }
 
-    const diceTypes = rollData.results.map(r => `1d${r.sides}`).join('+')
-    const values = rollData.results.map(r => r.value).join(',')
+    const diceTypes = rollData.results.map((r) => `1d${r.sides}`).join('+')
+    const values = rollData.results.map((r) => r.value).join(',')
     const notation = `${diceTypes}@${values}`
 
-    console.log(
-      'Rolling with notation:',
-      notation,
-      'in color:',
-      color,
-      'strength:',
-      strength
-    )
+    console.log('Rolling with notation:', notation, 'in color:', color, 'strength:', strength)
 
     try {
       const result = await this.diceBox.roll(notation)
@@ -107,4 +102,3 @@ export class DiceBoxComponent extends HTMLElement {
 }
 
 customElements.define('dice-box', DiceBoxComponent)
-

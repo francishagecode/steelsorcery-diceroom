@@ -1,4 +1,4 @@
-import { emitEmojiConfetti, broadcastEmoji } from './network.js'
+import { broadcastEmoji, emitEmojiConfetti } from './network.js'
 
 class EmojiButtons extends HTMLElement {
   connectedCallback() {
@@ -8,8 +8,8 @@ class EmojiButtons extends HTMLElement {
   attachEventListeners() {
     const buttons = this.querySelectorAll('button')
 
-    buttons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', (_e) => {
         const emoji = btn.dataset.emoji
 
         this.triggerEmojiConfetti(emoji)
@@ -31,4 +31,3 @@ class EmojiButtons extends HTMLElement {
 }
 
 customElements.define('emoji-buttons', EmojiButtons)
-

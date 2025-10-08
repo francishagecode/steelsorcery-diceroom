@@ -1,4 +1,4 @@
-import {selfId, broadcastRoll, displayRollInHistory, peerColors} from './network.js'
+import { broadcastRoll, displayRollInHistory, peerColors, selfId } from './network.js'
 
 const pool = []
 
@@ -15,7 +15,7 @@ class DicePool extends HTMLElement {
   connectedCallback() {
     this.dicePoolEl = this.querySelector('#dice-pool')
     this.rollPoolBtn = this.querySelector('#roll-pool-btn')
-    
+
     if (this.rollPoolBtn) {
       this.rollPoolBtn.style.transition = 'background-color 0.2s'
     }
@@ -24,13 +24,13 @@ class DicePool extends HTMLElement {
 
   addDieToPool(sides) {
     const dieId = Date.now() + Math.random()
-    pool.push({id: dieId, sides})
+    pool.push({ id: dieId, sides })
     this.renderPool()
     this.updateRollButton()
   }
 
   removeDieFromPool(dieId) {
-    const index = pool.findIndex(d => d.id === dieId)
+    const index = pool.findIndex((d) => d.id === dieId)
     if (index !== -1) {
       pool.splice(index, 1)
       this.renderPool()
@@ -53,7 +53,7 @@ class DicePool extends HTMLElement {
     }
 
     this.dicePoolEl.innerHTML = ''
-    pool.forEach(die => {
+    pool.forEach((die) => {
       const dieEl = document.createElement('button')
       const colorClasses = {
         4: 'bg-dice-4 text-black hover:border-white',
@@ -61,7 +61,7 @@ class DicePool extends HTMLElement {
         8: 'bg-dice-8 text-white hover:border-white',
         10: 'bg-dice-10 text-white hover:border-white',
         12: 'bg-dice-12 text-black hover:border-white',
-        20: 'bg-dice-20 text-black hover:border-white'
+        20: 'bg-dice-20 text-black hover:border-white',
       }
       dieEl.className = `w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] lg:w-[70px] lg:h-[70px] text-base sm:text-lg font-bold border-2 sm:border-[3px] border-black rounded-lg sm:rounded-xl cursor-pointer transition-all shadow-[0_3px_6px_rgb(0_0_0/0.3)] hover:scale-110 hover:shadow-[0_5px_10px_rgb(255_255_255/0.3)] ${colorClasses[die.sides]}`
       dieEl.textContent = `d${die.sides}`
@@ -81,13 +81,13 @@ class DicePool extends HTMLElement {
     }
 
     const grouped = {}
-    pool.forEach(die => {
+    pool.forEach((die) => {
       grouped[die.sides] = (grouped[die.sides] || 0) + 1
     })
 
     const summary = Object.keys(grouped)
       .sort((a, b) => a - b)
-      .map(sides => `${grouped[sides]}d${sides}`)
+      .map((sides) => `${grouped[sides]}d${sides}`)
       .join(', ')
 
     summaryEl.textContent = summary
@@ -108,15 +108,15 @@ class DicePool extends HTMLElement {
   }
 
   attachEventListeners() {
-    this.querySelectorAll('.dice-type-btn').forEach(btn => {
+    this.querySelectorAll('.dice-type-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const sides = parseInt(btn.dataset.sides)
+        const sides = parseInt(btn.dataset.sides, 10)
         this.addDieToPool(sides)
       })
 
-      btn.addEventListener('contextmenu', e => {
+      btn.addEventListener('contextmenu', (e) => {
         e.preventDefault()
-        const sides = parseInt(btn.dataset.sides)
+        const sides = parseInt(btn.dataset.sides, 10)
         this.clearPool()
         this.addDieToPool(sides)
         setTimeout(() => {
@@ -128,11 +128,11 @@ class DicePool extends HTMLElement {
     })
 
     if (this.rollPoolBtn) {
-      this.rollPoolBtn.addEventListener('mousedown', e => this.startHolding(e))
-      this.rollPoolBtn.addEventListener('mouseup', e => this.releaseHold(e))
+      this.rollPoolBtn.addEventListener('mousedown', (e) => this.startHolding(e))
+      this.rollPoolBtn.addEventListener('mouseup', (e) => this.releaseHold(e))
       this.rollPoolBtn.addEventListener('mouseleave', () => this.cancelHold())
-      this.rollPoolBtn.addEventListener('touchstart', e => this.startHolding(e))
-      this.rollPoolBtn.addEventListener('touchend', e => this.releaseHold(e))
+      this.rollPoolBtn.addEventListener('touchstart', (e) => this.startHolding(e))
+      this.rollPoolBtn.addEventListener('touchend', (e) => this.releaseHold(e))
       this.rollPoolBtn.addEventListener('touchcancel', () => this.cancelHold())
     }
   }
@@ -159,7 +159,7 @@ class DicePool extends HTMLElement {
       this.rollPoolBtn.style.setProperty(
         'background-color',
         `rgb(${red}, ${green}, ${blue})`,
-        'important'
+        'important',
       )
     }, 1)
   }
@@ -196,27 +196,27 @@ class DicePool extends HTMLElement {
     const diceToRoll = [...pool]
     this.clearPool()
 
-    const results = diceToRoll.map(die => ({
+    const results = diceToRoll.map((die) => ({
       sides: die.sides,
-      value: Math.floor(Math.random() * die.sides) + 1
+      value: Math.floor(Math.random() * die.sides) + 1,
     }))
 
     const total = results.reduce((sum, r) => sum + r.value, 0)
 
     const rollData = {
       peerId: selfId,
-      dice: diceToRoll.map(d => d.sides),
+      dice: diceToRoll.map((d) => d.sides),
       results,
       total,
       timestamp: Date.now(),
-      strength
+      strength,
     }
 
     broadcastRoll(rollData)
-    
+
     const diceBoxEl = document.querySelector('dice-box')
     await diceBoxEl.roll(rollData, peerColors[selfId], strength)
-    
+
     displayRollInHistory(rollData, selfId)
 
     this.setRollButtonState(false, 'Roll Pool')
@@ -225,4 +225,3 @@ class DicePool extends HTMLElement {
 }
 
 customElements.define('dice-pool', DicePool)
-
