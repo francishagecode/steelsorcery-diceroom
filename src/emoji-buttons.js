@@ -1,4 +1,4 @@
-import { emitEmojiConfetti, broadcastEmoji } from '../network.js'
+import { emitEmojiConfetti, broadcastEmoji } from './network.js'
 
 class EmojiButtons extends HTMLElement {
   connectedCallback() {
@@ -12,16 +12,13 @@ class EmojiButtons extends HTMLElement {
       btn.addEventListener('click', (e) => {
         const emoji = btn.dataset.emoji
 
-        // Emit confetti from this button's position
         this.triggerEmojiConfetti(emoji)
 
-        // Broadcast just the emoji to other clients
         broadcastEmoji(emoji)
       })
     })
   }
 
-  // Trigger confetti from the button position for this emoji
   triggerEmojiConfetti(emoji) {
     const button = this.querySelector(`[data-emoji="${emoji}"]`)
     if (button) {
@@ -34,3 +31,4 @@ class EmojiButtons extends HTMLElement {
 }
 
 customElements.define('emoji-buttons', EmojiButtons)
+

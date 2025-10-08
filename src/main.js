@@ -13,30 +13,18 @@ import {
   broadcastColor,
   broadcastDiceSettings
 } from './network.js'
-import {
-  pool,
-  initDiceBox,
-  reinitializeDiceBox,
-  roll3DDice,
-  addDieToPool,
-  clearPool,
-  updateRollButton,
-  setRollButtonState,
-  updateDiceConfig
-} from './dice.js'
-import './components/emoji-buttons.js'
-import './components/dice-pool.js'
+import './emoji-buttons.js'
+import './dice-pool.js'
+import './dice-settings.js'
+import './dice-box.js'
 
 console.log('=== MAIN.JS STARTED, IMPORTS COMPLETE ===')
 
-// Get room ID from URL hash
 const roomId = window.location.hash.slice(1) || 'main'
 console.log('Room ID:', roomId)
 
-// Default color options
-const defaultColors = ['#dc143c', '#ffd700', '#4169e1', '#32cd32'] // red, yellow, blue, green
+const defaultColors = ['#dc143c', '#ffd700', '#4169e1', '#32cd32']
 
-// Initialize player name
 let myName = localStorage.getItem('playerName')
 if (!myName) {
   const playerName = prompt('Enter your name:')
@@ -45,71 +33,31 @@ if (!myName) {
   localStorage.setItem('playerName', myName)
 }
 
-// Initialize player color (dice color)
-let myColor = localStorage.getItem('playerColor')
-if (!myColor) {
-  myColor = defaultColors[Math.floor(Math.random() * defaultColors.length)]
-  localStorage.setItem('playerColor', myColor)
-}
+const diceSettingsEl = document.querySelector('dice-settings')
+const diceBoxEl = document.querySelector('dice-box')
 
-// Initialize dice preferences
-let myLabelColor = localStorage.getItem('labelColor') || '#ffffff'
-let myMaterial = localStorage.getItem('material') || 'plastic'
-let myTexture = localStorage.getItem('texture') || ''
+const settings = diceSettingsEl.getSettings()
 
 peerNames[selfId] = myName
-peerColors[selfId] = myColor
+peerColors[selfId] = settings.color
 peerDiceSettings[selfId] = {
-  texture: myTexture,
-  material: myMaterial,
-  labelColor: myLabelColor
+  texture: settings.texture,
+  material: settings.material,
+  labelColor: settings.labelColor
 }
 
-// Load available textures and populate dropdown
-async function loadTextures() {
-  try {
-    const response = await fetch('./textures.json')
-    const textures = await response.json()
-    const textureSelect = document.querySelector('#texture-select')
 
-    // Clear existing options except "None"
-    textureSelect.innerHTML = '<option value="">None (Solid)</option>'
-
-    // Add all available textures
-    textures.forEach(texture => {
-      const option = document.createElement('option')
-      option.value = texture
-      option.textContent =
-        texture.charAt(0).toUpperCase() + texture.slice(1).replace(/[.-]/g, ' ')
-      textureSelect.appendChild(option)
-    })
-
-    // Set saved texture value
-    textureSelect.value = myTexture
-  } catch (err) {
-    console.error('Failed to load textures:', err)
-  }
-}
-
-// Load textures before initializing
-await loadTextures()
-
-// Set UI values to saved preferences
-document.querySelector('#label-color-picker').value = myLabelColor
-document.querySelector('#material-select').value = myMaterial
-
-// Initialize 3D dice box with saved preferences
-await initDiceBox(myColor, {
-  labelColor: myLabelColor,
-  material: myMaterial,
-  texture: myTexture
+await diceBoxEl.initialize(settings.color, {
+  labelColor: settings.labelColor,
+  material: settings.material,
+  texture: settings.texture
 })
 
 async function handleIncomingRoll(rollData, peerId) {
   const rollerColor = peerColors[peerId] || '#ffffff'
   const strength = rollData.strength || 11
   const settings = peerDiceSettings[peerId] || {}
-  await roll3DDice(rollData, rollerColor, strength, settings)
+  await diceBoxEl.roll(rollData, rollerColor, strength, settings)
   displayRollInHistory(rollData, peerId)
 }
 
@@ -163,7 +111,6 @@ function simpleMD5Hash(str) {
   return Math.abs(hash).toString(16).substring(0, 8)
 }
 
-// Change name button
 document.querySelector('#name-btn').addEventListener('click', () => {
   const newName = prompt('Enter your name:', myName)
   if (newName && newName.trim()) {
@@ -183,36 +130,14 @@ document.querySelector('#name-btn').addEventListener('click', () => {
   }
 })
 
-// Dice settings dialog
-const diceSettingsDialog = document.querySelector('#dice-settings-dialog')
-document.querySelector('#dice-settings-btn').addEventListener('click', () => {
-  diceSettingsDialog.showModal()
-})
-document.querySelector('#close-dialog-btn').addEventListener('click', () => {
-  diceSettingsDialog.close()
-})
+diceSettingsEl.addEventListener('color-change', async e => {
+  const {color} = e.detail
+  peerColors[selfId] = color
 
-// Color picker
-const colorPicker = document.querySelector('#color-picker')
-colorPicker.value = myColor
-colorPicker.addEventListener('input', async e => {
-  myColor = e.target.value
-  peerColors[selfId] = myColor
-  localStorage.setItem('playerColor', myColor)
-
-  const cursorEl = document.querySelector(`#cursor-${selfId}`)
-  if (cursorEl) {
-    const labelEl = cursorEl.querySelector('p')
-    if (labelEl) {
-      labelEl.style.color = myColor
-    }
-  }
-
-  await reinitializeDiceBox(myColor)
-  broadcastColor(myColor)
+  await diceBoxEl.reinitialize(color)
+  broadcastColor(color)
 })
 
-// Mouse/touch movement tracking
 addEventListener('mousemove', ({clientX, clientY}) => {
   const x = clientX / innerWidth
   const y = clientY / innerHeight
@@ -227,33 +152,38 @@ addEventListener('touchmove', e => {
   broadcastMove([x, y])
 })
 
-// Dice settings controls
-document
-  .querySelector('#label-color-picker')
-  .addEventListener('change', async e => {
-    myLabelColor = e.target.value
-    localStorage.setItem('labelColor', myLabelColor)
-    peerDiceSettings[selfId].labelColor = myLabelColor
-    await updateDiceConfig({labelColor: myLabelColor}, myColor)
-    broadcastDiceSettings(peerDiceSettings[selfId])
-  })
+diceSettingsEl.addEventListener('label-color-change', async e => {
+  const {labelColor} = e.detail
+  peerDiceSettings[selfId].labelColor = labelColor
+  const currentSettings = diceSettingsEl.getSettings()
+  await diceBoxEl.updateConfig({labelColor}, currentSettings.color)
+  broadcastDiceSettings(peerDiceSettings[selfId])
+})
 
-document
-  .querySelector('#material-select')
-  .addEventListener('change', async e => {
-    myMaterial = e.target.value
-    localStorage.setItem('material', myMaterial)
-    peerDiceSettings[selfId].material = myMaterial
-    await updateDiceConfig({material: myMaterial}, myColor)
-    broadcastDiceSettings(peerDiceSettings[selfId])
-  })
+diceSettingsEl.addEventListener('material-change', async e => {
+  const {material} = e.detail
+  peerDiceSettings[selfId].material = material
+  const currentSettings = diceSettingsEl.getSettings()
+  await diceBoxEl.updateConfig({material}, currentSettings.color)
+  broadcastDiceSettings(peerDiceSettings[selfId])
+})
 
-document
-  .querySelector('#texture-select')
-  .addEventListener('change', async e => {
-    myTexture = e.target.value
-    localStorage.setItem('texture', myTexture)
-    peerDiceSettings[selfId].texture = myTexture
-    await updateDiceConfig({texture: myTexture}, myColor)
-    broadcastDiceSettings(peerDiceSettings[selfId])
-  })
+diceSettingsEl.addEventListener('texture-change', async e => {
+  const {texture} = e.detail
+  peerDiceSettings[selfId].texture = texture
+  const currentSettings = diceSettingsEl.getSettings()
+  await diceBoxEl.updateConfig({texture}, currentSettings.color)
+  broadcastDiceSettings(peerDiceSettings[selfId])
+})
+
+addEventListener('hashchange', () => {
+  window.location.reload()
+})
+
+document.querySelector('#faq-btn').addEventListener('click', () => {
+  document.querySelector('#faq-dialog').showModal()
+})
+
+document.querySelector('#close-faq-btn').addEventListener('click', () => {
+  document.querySelector('#faq-dialog').close()
+})

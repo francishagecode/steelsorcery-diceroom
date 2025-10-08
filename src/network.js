@@ -73,7 +73,7 @@ export function initRoom(roomName, onRollReceived) {
     if (cursors[peerId]) {
       const nameLabel = cursors[peerId].querySelector('p')
       if (nameLabel) {
-        nameLabel.style.color = color
+        nameLabel.style.borderLeft = `3px solid ${color}`
       }
     }
   })
@@ -168,9 +168,13 @@ export function addCursor(id, isSelf = false) {
   img.src = 'assets/images/hand.png'
   img.className = 'w-[34px] h-[46px]'
   img.style.imageRendering = 'pixelated'
-  txt.className = `text-center text-base font-bold ${isSelf ? 'bg-white/80 px-2 rounded' : ''}`
+  txt.className = `text-center text-sm font-bold px-2 py-1 rounded-lg shadow-lg ${isSelf ? 'bg-white/90 text-black' : 'bg-black/90 text-white'}`
   txt.innerText = peerNames[id] || id.slice(0, 4)
-  txt.style.color = peerColors[id] || '#ffffff'
+  
+  if (!isSelf) {
+    txt.style.borderLeft = `3px solid ${peerColors[id] || '#ffffff'}`
+  }
+  
   el.appendChild(img)
   el.appendChild(txt)
   el.id = `cursor-${id}`
@@ -213,31 +217,36 @@ export function displayRollInHistory(rollData, peerId) {
   const isYou = peerId === selfId
 
   const rollEl = document.createElement('div')
-  rollEl.className = `bg-black/40 rounded-xl p-8 animate-[slideIn_0.3s_ease-out] ${
-    isYou ? 'ring-2 ring-white/30' : ''
+  rollEl.className = `bg-black/40 rounded-xl p-4 sm:p-6 lg:p-8 animate-[slideIn_0.3s_ease-out] ${
+    isYou ? 'ring-1 sm:ring-2 ring-white/30' : ''
   }`
 
   const header = document.createElement('div')
-  header.className = 'flex justify-between mb-6 text-base items-start'
+  header.className = 'flex justify-between mb-4 sm:mb-6 text-xs sm:text-sm lg:text-base items-start'
 
   const leftInfo = document.createElement('div')
-  leftInfo.className = 'flex flex-col'
+  leftInfo.className = 'flex items-center gap-2'
+
+  const colorDot = document.createElement('div')
+  colorDot.className = 'w-3 h-3 rounded-full flex-shrink-0'
+  colorDot.style.backgroundColor = peerColors[peerId] || '#ffffff'
 
   const player = document.createElement('span')
-  player.className = `font-bold text-xl ${isYou ? 'text-orange-400' : 'text-white'}`
+  player.className = `font-bold text-base sm:text-lg lg:text-xl ${isYou ? 'text-orange-400' : 'text-white'}`
   player.textContent = playerName
 
+  leftInfo.appendChild(colorDot)
   leftInfo.appendChild(player)
 
   const rightInfo = document.createElement('div')
-  rightInfo.className = 'flex flex-col items-end gap-2'
+  rightInfo.className = 'flex flex-col items-end gap-1 sm:gap-2'
 
   const time = document.createElement('span')
-  time.className = 'text-gray-500 text-base'
+  time.className = 'text-gray-500 text-xs sm:text-sm lg:text-base'
   time.textContent = new Date(timestamp).toLocaleTimeString()
 
   const totalEl = document.createElement('div')
-  totalEl.className = 'text-2xl font-bold text-white'
+  totalEl.className = 'text-lg sm:text-xl lg:text-2xl font-bold text-white'
   totalEl.textContent = `Total: ${total}`
 
   rightInfo.appendChild(time)
@@ -247,7 +256,7 @@ export function displayRollInHistory(rollData, peerId) {
   header.appendChild(rightInfo)
 
   const diceContainer = document.createElement('div')
-  diceContainer.className = 'flex gap-1 flex-wrap'
+  diceContainer.className = 'flex gap-1 sm:gap-1.5 flex-wrap'
 
   results.forEach(result => {
     const die = document.createElement('span')
@@ -259,12 +268,12 @@ export function displayRollInHistory(rollData, peerId) {
       12: 'bg-dice-12 text-black border-black',
       20: 'bg-dice-20 text-black border-black'
     }
-    die.className = `min-w-[60px] h-[60px] px-4 flex items-center justify-center text-2xl font-bold rounded-lg shadow-[0_4px_6px_rgb(0_0_0/0.3)] relative border-[3px] ${diceColors[result.sides]}`
+    die.className = `min-w-[50px] sm:min-w-[55px] lg:min-w-[60px] h-[50px] sm:h-[55px] lg:h-[60px] px-3 sm:px-4 flex items-center justify-center text-xl sm:text-2xl font-bold rounded-lg shadow-[0_4px_6px_rgb(0_0_0/0.3)] relative border-2 sm:border-[3px] ${diceColors[result.sides]}`
     die.textContent = result.value
 
     const label = document.createElement('span')
     label.className =
-      'absolute bottom-[2px] right-1 text-base text-black/40 font-normal'
+      'absolute bottom-[2px] right-1 text-xs sm:text-sm lg:text-base text-black/40 font-normal'
     label.textContent = `d${result.sides}`
     die.appendChild(label)
 
@@ -276,7 +285,7 @@ export function displayRollInHistory(rollData, peerId) {
 
   rollHistory.insertBefore(rollEl, rollHistory.firstChild)
 
-  const maxRolls = 50
+  const maxRolls = 20
   while (rollHistory.children.length > maxRolls) {
     rollHistory.removeChild(rollHistory.lastChild)
   }
