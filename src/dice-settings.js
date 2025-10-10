@@ -1,10 +1,10 @@
 export class DiceSettings extends HTMLElement {
   constructor() {
     super()
-    this.myColor = localStorage.getItem('playerColor') || '#dc143c'
+    this.myColor = localStorage.getItem('playerColor') || '#89CFF0'
     this.myLabelColor = localStorage.getItem('labelColor') || '#ffffff'
-    this.myMaterial = localStorage.getItem('material') || 'plastic'
-    this.myTexture = localStorage.getItem('texture') || ''
+    this.myMaterial = localStorage.getItem('material') || 'glass'
+    this.myTexture = localStorage.getItem('texture') || 'astral'
   }
 
   async connectedCallback() {
@@ -21,11 +21,12 @@ export class DiceSettings extends HTMLElement {
 
       textureSelect.innerHTML = '<option value="">None (Solid)</option>'
 
-      textures.forEach((texture) => {
+      textures.forEach(texture => {
         const option = document.createElement('option')
         option.value = texture
         option.textContent =
-          texture.charAt(0).toUpperCase() + texture.slice(1).replace(/[.-]/g, ' ')
+          texture.charAt(0).toUpperCase() +
+          texture.slice(1).replace(/[.-]/g, ' ')
         textureSelect.appendChild(option)
       })
 
@@ -54,47 +55,47 @@ export class DiceSettings extends HTMLElement {
       closeBtn.addEventListener('click', () => dialog.close())
     }
 
-    this.querySelector('#color-picker').addEventListener('input', (e) => {
+    this.querySelector('#color-picker').addEventListener('input', e => {
       this.myColor = e.target.value
       localStorage.setItem('playerColor', this.myColor)
       this.dispatchEvent(
         new CustomEvent('color-change', {
-          detail: { color: this.myColor },
-          bubbles: true,
-        }),
+          detail: {color: this.myColor},
+          bubbles: true
+        })
       )
     })
 
-    this.querySelector('#label-color-picker').addEventListener('change', (e) => {
+    this.querySelector('#label-color-picker').addEventListener('change', e => {
       this.myLabelColor = e.target.value
       localStorage.setItem('labelColor', this.myLabelColor)
       this.dispatchEvent(
         new CustomEvent('label-color-change', {
-          detail: { labelColor: this.myLabelColor },
-          bubbles: true,
-        }),
+          detail: {labelColor: this.myLabelColor},
+          bubbles: true
+        })
       )
     })
 
-    this.querySelector('#material-select').addEventListener('change', (e) => {
+    this.querySelector('#material-select').addEventListener('change', e => {
       this.myMaterial = e.target.value
       localStorage.setItem('material', this.myMaterial)
       this.dispatchEvent(
         new CustomEvent('material-change', {
-          detail: { material: this.myMaterial },
-          bubbles: true,
-        }),
+          detail: {material: this.myMaterial},
+          bubbles: true
+        })
       )
     })
 
-    this.querySelector('#texture-select').addEventListener('change', (e) => {
+    this.querySelector('#texture-select').addEventListener('change', e => {
       this.myTexture = e.target.value
       localStorage.setItem('texture', this.myTexture)
       this.dispatchEvent(
         new CustomEvent('texture-change', {
-          detail: { texture: this.myTexture },
-          bubbles: true,
-        }),
+          detail: {texture: this.myTexture},
+          bubbles: true
+        })
       )
     })
   }
@@ -104,7 +105,7 @@ export class DiceSettings extends HTMLElement {
       color: this.myColor,
       labelColor: this.myLabelColor,
       material: this.myMaterial,
-      texture: this.myTexture,
+      texture: this.myTexture
     }
   }
 }
