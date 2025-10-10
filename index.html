@@ -123,7 +123,7 @@
       }
 
       .animated-gradient {
-        background: linear-gradient(270deg, #193c49, #060334);
+        background: linear-gradient(270deg, #1a1a2e, #16213e, #0f3460);
         background-size: 400% 400%;
         animation: gradientShift 60s ease infinite;
       }
@@ -199,83 +199,6 @@
         </div>
       </header>
 
-      <!-- Dice Settings Dialog -->
-      <dice-settings>
-        <dialog
-          id="dice-settings-dialog"
-          class="bg-black/95 backdrop:bg-black/80 text-white rounded-lg sm:rounded-xl p-4 sm:p-6 max-w-[calc(100vw-2rem)] sm:max-w-2xl w-full border border-white/20 sm:border-2"
-        >
-          <div class="flex justify-between items-center mb-4 sm:mb-6">
-            <h2 class="text-xl sm:text-2xl font-bold">Dice Settings</h2>
-            <button
-              id="close-dialog-btn"
-              class="text-2xl sm:text-3xl leading-none hover:text-red-400 transition-colors"
-            >
-              &times;
-            </button>
-          </div>
-
-          <!-- Color Picker -->
-          <div class="mb-4 sm:mb-6">
-            <label
-              class="text-base sm:text-lg font-semibold text-gray-300 block mb-2"
-              >Dice Color:</label
-            >
-            <input
-              type="color"
-              id="color-picker"
-              title="Choose your dice color"
-              class="w-full h-10 sm:h-12 rounded-lg cursor-pointer border-2 border-white/30"
-            />
-          </div>
-
-          <!-- Dice Customization Settings -->
-          <div class="mb-4 sm:mb-6">
-            <div
-              class="text-base sm:text-lg font-semibold text-gray-300 mb-2 sm:mb-3"
-            >
-              Dice Customization:
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <div>
-                <label class="text-xs sm:text-sm text-gray-400 block mb-1"
-                  >Label Color:</label
-                >
-                <input
-                  id="label-color-picker"
-                  type="color"
-                  value="#ffffff"
-                  class="w-full h-10 rounded cursor-pointer border-2 border-white/30"
-                />
-              </div>
-              <div>
-                <label class="text-xs sm:text-sm text-gray-400 block mb-1"
-                  >Material:</label
-                >
-                <select
-                  id="material-select"
-                  class="w-full bg-black/60 text-white p-2 text-sm sm:text-base rounded border-2 border-white/30"
-                >
-                  <option value="plastic" selected>Plastic</option>
-                  <option value="glass">Glass</option>
-                </select>
-              </div>
-              <div>
-                <label class="text-xs sm:text-sm text-gray-400 block mb-1"
-                  >Texture:</label
-                >
-                <select
-                  id="texture-select"
-                  class="w-full bg-black/60 text-white p-2 text-sm sm:text-base rounded border-2 border-white/30"
-                >
-                  <option value="">Loading textures...</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </dialog>
-      </dice-settings>
-
       <main
         class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[40%_1fr] gap-4 sm:gap-6 items-start"
       >
@@ -345,7 +268,7 @@
           </div>
         </dice-pool>
 
-        <div class="flex flex-col gap-3 sm:gap-4 w-full">
+        <div class="grid gap-3 sm:gap-4 w-full">
           <dice-box
             id="dice-box-container"
             class="bg-black/40 flex items-stretch justify-stretch rounded-xl overflow-hidden h-[350px] lg:h-[450px] w-full"
@@ -409,7 +332,82 @@
         >Support on Patreon</a
       >
     </footer>
+    <!-- Dice Settings Dialog -->
+    <dice-settings>
+      <dialog
+        id="dice-settings-dialog"
+        class="bg-black/95 backdrop:bg-black/80 text-white rounded-lg sm:rounded-xl p-4 sm:p-6 max-w-[calc(100vw-2rem)] sm:max-w-2xl w-full border border-white/20 sm:border-2"
+      >
+        <div class="flex justify-between items-center mb-4 sm:mb-6">
+          <h2 class="text-xl sm:text-2xl font-bold">Dice Settings</h2>
+          <button
+            id="close-dialog-btn"
+            class="text-2xl sm:text-3xl leading-none hover:text-red-400 transition-colors"
+          >
+            &times;
+          </button>
+        </div>
 
+        <!-- Color Picker -->
+        <div class="mb-4 sm:mb-6">
+          <label
+            class="text-base sm:text-lg font-semibold text-gray-300 block mb-2"
+            >Dice Color:</label
+          >
+          <input
+            type="color"
+            id="color-picker"
+            title="Choose your dice color"
+            class="w-full h-10 sm:h-12 rounded-lg cursor-pointer border-2 border-white/30"
+          />
+        </div>
+
+        <!-- Dice Customization Settings -->
+        <div class="mb-4 sm:mb-6">
+          <div
+            class="text-base sm:text-lg font-semibold text-gray-300 mb-2 sm:mb-3"
+          >
+            Dice Customization:
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 block mb-1"
+                >Label Color:</label
+              >
+              <input
+                id="label-color-picker"
+                type="color"
+                value="#ffffff"
+                class="w-full h-10 rounded cursor-pointer border-2 border-white/30"
+              />
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 block mb-1"
+                >Material:</label
+              >
+              <select
+                id="material-select"
+                class="w-full bg-black/60 text-white p-2 text-sm sm:text-base rounded border-2 border-white/30"
+              >
+                <option value="plastic" selected>Plastic</option>
+                <option value="glass">Glass</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs sm:text-sm text-gray-400 block mb-1"
+                >Texture:</label
+              >
+              <select
+                id="texture-select"
+                class="w-full bg-black/60 text-white p-2 text-sm sm:text-base rounded border-2 border-white/30"
+              >
+                <option value="">Loading textures...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </dialog>
+    </dice-settings>
     <dialog
       id="faq-dialog"
       class="bg-black/95 backdrop:bg-black/80 text-white rounded-lg sm:rounded-xl p-4 sm:p-6 max-w-[calc(100vw-2rem)] sm:max-w-3xl w-full border border-white/20 sm:border-2 max-h-[80vh] overflow-y-auto"
