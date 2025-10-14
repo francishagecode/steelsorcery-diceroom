@@ -91,6 +91,7 @@
         font-display: swap;
       }
       @theme {
+        --color-dice-2: #c0c0c0;
         --color-dice-4: #ffd700;
         --color-dice-6: #dc143c;
         --color-dice-8: #4169e1;
@@ -201,10 +202,32 @@
       >
         <dice-pool class="w-full flex flex-col gap-4 sm:gap-6">
           <div class="bg-black/40 rounded-xl p-4 sm:p-6 lg:p-8">
-            <div class="text-lg sm:text-xl mb-4 sm:mb-6 font-bold text-white">
-              Add to Pool:
+            <div
+              class="flex gap-4 text-sm mb-4 sm:mb-6 font-bold text-white text-center justify-center"
+            >
+              <span class="flex items-center gap-2">
+                <kbd
+                  class="bg-black text-[10px] p-1 px-1.5 rounded-lg text-white"
+                  >Left click</kbd
+                >
+                Add to Pool</span
+              >
+              <span>|</span>
+              <span class="flex items-center gap-2">
+                <kbd
+                  class="bg-black text-[10px] p-1 px-1.5 rounded-lg text-white"
+                  >Right click</kbd
+                >
+                Insta-roll</span
+              >
             </div>
             <div class="flex gap-1.5 sm:gap-2 flex-wrap justify-center">
+              <button
+                class="dice-type-btn aspect-square w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 bg-dice-2 text-white border-2 sm:border-[3px] border-black rounded-lg sm:rounded-xl cursor-pointer transition-all shadow-[0_4px_8px_rgb(0_0_0/0.3)] text-lg sm:text-xl lg:text-2xl font-bold hover:-translate-y-1 sm:hover:-translate-y-2 hover:shadow-[0_8px_16px_rgb(255_255_255/0.3)] hover:border-white active:-translate-y-0.5"
+                data-sides="2"
+              >
+                d2
+              </button>
               <button
                 class="dice-type-btn aspect-square w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 bg-dice-4 text-black border-2 sm:border-[3px] border-black rounded-lg sm:rounded-xl cursor-pointer transition-all shadow-[0_4px_8px_rgb(0_0_0/0.3)] text-lg sm:text-xl lg:text-2xl font-bold hover:-translate-y-1 sm:hover:-translate-y-2 hover:shadow-[0_8px_16px_rgb(255_255_255/0.3)] hover:border-white active:-translate-y-0.5"
                 data-sides="4"
@@ -272,7 +295,10 @@
           >
             <!-- 3D Dice here -->
           </dice-box>
-          <div id="roll-history" class="flex flex-col gap-3 sm:gap-4"></div>
+          <div
+            id="roll-history"
+            class="flex flex-col gap-3 sm:gap-4 mb-24"
+          ></div>
         </div>
       </main>
 
