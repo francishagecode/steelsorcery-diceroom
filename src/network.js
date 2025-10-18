@@ -1,6 +1,5 @@
 // import { joinRoom, selfId } from 'trystero/torrent'
-import {joinRoom, selfId} from 'trystero/ipfs' // (trystero-ipfs.min.js)
-const canvas = document.querySelector('#canvas')
+import {joinRoom, selfId} from 'trystero/mqtt' // (trystero-mqtt.min.js with a local file)const canvas = document.querySelector('#canvas')
 const rollHistory = document.querySelector('#roll-history')
 const peerCountEl = document.querySelector('#peer-count')
 
