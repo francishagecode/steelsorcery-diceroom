@@ -1,5 +1,4 @@
-// import { joinRoom, selfId } from 'trystero/torrent'
-import {joinRoom, selfId} from 'trystero/mqtt' // (trystero-mqtt.min.js with a local file)const canvas = document.querySelector('#canvas')
+import {joinRoom, selfId} from 'trystero/supabase' // (trystero-supabase.min.js)
 const rollHistory = document.querySelector('#roll-history')
 const peerCountEl = document.querySelector('#peer-count')
 
@@ -7,26 +6,25 @@ export {selfId}
 
 export const peerNames = {}
 export const peerColors = {}
-export const peerDiceSettings = {} // Store texture, material, labelColor per peer
+export const peerDiceSettings = {}
 const cursors = {}
 
-let room = null
-let sendRoll = null
-let sendName = null
-let sendMove = null
-let sendColor = null
-let sendEmoji = null
-let sendDiceSettings = null
+const room = null
+const sendRoll = null
+const sendName = null
+const sendMove = null
+const sendColor = null
+const sendEmoji = null
+const sendDiceSettings = null
 
 const config = {
-  appId: 'steel-sorcery-diceroom'
+  appId: 'https://qedpxdusplakbbdmkqke.supabase.co',
+  supabaseKey:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZHB4ZHVzcGxha2JiZG1rcWtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MTc1NDgsImV4cCI6MjA3NzM5MzU0OH0.pM8IdSC8oFb1IxDYm84yLBigG-CiRTcK8A58XtGqLb0'
 }
 
 // Initialize room and setup peer handlers
 export function initRoom(roomName, onRollReceived) {
-  let getRoll, getName, getMove, getColor, getEmoji, getDiceSettings
-
-  room = joinRoom(config, roomName)
   ;[sendRoll, getRoll] = room.makeAction('diceRoll')
   ;[sendName, getName] = room.makeAction('playerName')
   ;[sendMove, getMove] = room.makeAction('mouseMove')
@@ -34,18 +32,19 @@ export function initRoom(roomName, onRollReceived) {
   ;[sendEmoji, getEmoji] = room.makeAction('emoji')
   ;[sendDiceSettings, getDiceSettings] = room.makeAction('diceSettings')
 
+  room = joinRoom(config, roomName)
+
   document.querySelector('#room-num').innerText = `Room: ${roomName}`
 
   room.onPeerJoin(peerId => {
     sendName(peerNames[selfId], peerId)
     sendColor(peerColors[selfId], peerId)
-    if (peerDiceSettings[selfId]) {
+    if (peerDiceSettings[selfId])
       sendDiceSettings(peerDiceSettings[selfId], peerId)
-    }
+
     addCursor(peerId)
-    if (sendMove) {
-      sendMove([Math.random() * 0.93, Math.random() * 0.93], peerId)
-    }
+    if (sendMove) sendMove([Math.random() * 0.93, Math.random() * 0.93], peerId)
+
     updatePeerCount()
   })
 
@@ -62,9 +61,7 @@ export function initRoom(roomName, onRollReceived) {
     peerNames[peerId] = name
     if (cursors[peerId]) {
       const nameLabel = cursors[peerId].querySelector('p')
-      if (nameLabel) {
-        nameLabel.textContent = name
-      }
+      if (nameLabel) nameLabel.textContent = name
     }
   })
   getColor((color, peerId) => {
@@ -81,12 +78,10 @@ export function initRoom(roomName, onRollReceived) {
   })
   getMove(moveCursor)
   getEmoji(emoji => {
-    // Find the emoji button on this client and trigger confetti from its position
     const emojiButtons = document.querySelector('emoji-buttons')
     if (emojiButtons?.triggerEmojiConfetti) {
       emojiButtons.triggerEmojiConfetti(emoji)
     } else {
-      // Fallback to random position if button not found
       emitEmojiConfetti(emoji)
     }
   })
