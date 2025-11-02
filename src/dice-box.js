@@ -11,7 +11,7 @@ export class DiceBoxComponent extends HTMLElement {
   }
 
   async initialize(color, initialConfig = {}) {
-    this.currentConfig = {color, ...initialConfig}
+    this.currentConfig = { color, ...initialConfig }
     await this.initializeDiceBox()
   }
 
@@ -22,8 +22,6 @@ export class DiceBoxComponent extends HTMLElement {
       outlineColor = '#000000',
       texture = '',
       material = 'plastic',
-      soundsSurface = 'wood_tray',
-      soundsVolume
     } = this.currentConfig
 
     return {
@@ -40,8 +38,6 @@ export class DiceBoxComponent extends HTMLElement {
       baseScale: 100,
       theme_surface: 'green-felt',
       strength: DEFAULT_STRENGTH,
-      soundsSurface,
-      soundsVolume,
       shadows: false,
       sounds: true,
       onRollComplete: results => console.log('Roll complete:', results)
@@ -49,7 +45,7 @@ export class DiceBoxComponent extends HTMLElement {
   }
 
   getConfigKey() {
-    const {color, labelColor, texture, material} = this.currentConfig
+    const { color, labelColor, texture, material } = this.currentConfig
     return `${color}-${labelColor}-${texture}-${material}`
   }
 
@@ -76,7 +72,7 @@ export class DiceBoxComponent extends HTMLElement {
   }
 
   async updateConfig(config, color) {
-    this.currentConfig = {...this.currentConfig, ...config, color}
+    this.currentConfig = { ...this.currentConfig, ...config, color }
     const needsReinit = !this.instanceCache.has(this.getConfigKey())
     if (needsReinit) await this.initializeDiceBox()
   }
@@ -97,7 +93,7 @@ export class DiceBoxComponent extends HTMLElement {
       this.currentConfig.labelColor !== newSettings.labelColor
 
     if (visualChanged) {
-      this.currentConfig = {...this.currentConfig, ...newSettings, color}
+      this.currentConfig = { ...this.currentConfig, ...newSettings, color }
       await this.initializeDiceBox()
     }
 
