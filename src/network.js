@@ -1,5 +1,4 @@
-// import { joinRoom, selfId } from 'trystero/torrent'
-import {joinRoom, selfId} from 'trystero/mqtt' // (trystero-mqtt.min.js with a local file)const canvas = document.querySelector('#canvas')
+import {joinRoom, selfId} from 'trystero/supabase' // (trystero-supabase.min.js)
 const rollHistory = document.querySelector('#roll-history')
 const peerCountEl = document.querySelector('#peer-count')
 
@@ -7,7 +6,7 @@ export {selfId}
 
 export const peerNames = {}
 export const peerColors = {}
-export const peerDiceSettings = {} // Store texture, material, labelColor per peer
+export const peerDiceSettings = {}
 const cursors = {}
 
 let room = null
@@ -19,7 +18,9 @@ let sendEmoji = null
 let sendDiceSettings = null
 
 const config = {
-  appId: 'steel-sorcery-diceroom'
+  appId: 'https://qedpxdusplakbbdmkqke.supabase.co',
+  supabaseKey:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZHB4ZHVzcGxha2JiZG1rcWtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MTc1NDgsImV4cCI6MjA3NzM5MzU0OH0.pM8IdSC8oFb1IxDYm84yLBigG-CiRTcK8A58XtGqLb0'
 }
 
 // Initialize room and setup peer handlers
