@@ -63,8 +63,10 @@ function connectToRoom(roomName) {
  * Sets up peer event handlers (join/leave)
  */
 function setupPeerHandlers() {
+  console.log('[Network] Setting up peer handlers')
   room.onPeerJoin(handlePeerJoin)
   room.onPeerLeave(handlePeerLeave)
+  console.log('[Network] Current peers:', room.getPeers())
 }
 
 /**
@@ -129,6 +131,8 @@ function handlePeerJoin(peerId) {
  * Called when a peer leaves the room
  */
 function handlePeerLeave(peerId) {
+  console.log('[Network] Peer left:', peerId)
+
   // Clean up peer state
   delete peerNames[peerId]
   delete peerColors[peerId]
