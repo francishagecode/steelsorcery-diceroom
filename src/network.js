@@ -34,7 +34,9 @@ const config = {
  * @returns {Object} The room instance
  */
 function connectToRoom(roomName) {
+  console.log('[Network] Connecting to room:', roomName, 'with config:', config)
   room = joinRoom(config, roomName)
+  console.log('[Network] Room joined, room object:', room)
 
   // Create bidirectional action channels
   const [sendRollFn, getRoll] = room.makeAction('diceRoll')
@@ -43,6 +45,8 @@ function connectToRoom(roomName) {
   const [sendColorFn, getColor] = room.makeAction('playerColor')
   const [sendEmojiFn, getEmoji] = room.makeAction('emoji')
   const [sendDiceSettingsFn, getDiceSettings] = room.makeAction('diceSettings')
+
+  console.log('[Network] Actions created successfully')
 
   // Store send functions in exported network object
   network.sendRoll = sendRollFn
@@ -103,6 +107,8 @@ function registerActionHandlers(receivers, onRollReceived) {
  * Called when a peer joins the room
  */
 function handlePeerJoin(peerId) {
+  console.log('[Network] Peer joined:', peerId)
+
   // Sync our current state to the new peer
   network.sendName?.(peerNames[selfId], peerId)
   network.sendColor?.(peerColors[selfId], peerId)
