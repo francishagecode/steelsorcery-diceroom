@@ -10,12 +10,16 @@ export const peerDiceSettings = {}
 const cursors = {}
 
 let room = null
-let sendRoll = null
-let sendName = null
-let sendMove = null
-let sendColor = null
-let sendEmoji = null
-let sendDiceSettings = null
+
+// Network action senders - initialized when room connects
+export const network = {
+  sendRoll: null,
+  sendName: null,
+  sendMove: null,
+  sendColor: null,
+  sendEmoji: null,
+  sendDiceSettings: null
+}
 
 const config = {
   appId: 'https://qedpxdusplakbbdmkqke.supabase.co',
@@ -23,76 +27,124 @@ const config = {
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZHB4ZHVzcGxha2JiZG1rcWtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MTc1NDgsImV4cCI6MjA3NzM5MzU0OH0.pM8IdSC8oFb1IxDYm84yLBigG-CiRTcK8A58XtGqLb0'
 }
 
-// Initialize room and setup peer handlers
-export function initRoom(roomName, onRollReceived) {
-  let getRoll, getName, getMove, getColor, getEmoji, getDiceSettings
-
+/**
+ * Joins a room and sets up network actions
+ * @param {string} roomName - The room ID to join
+ * @returns {Object} The room instance
+ */
+function connectToRoom(roomName) {
   room = joinRoom(config, roomName)
-  ;[sendRoll, getRoll] = room.makeAction('diceRoll')
-  ;[sendName, getName] = room.makeAction('playerName')
-  ;[sendMove, getMove] = room.makeAction('mouseMove')
-  ;[sendColor, getColor] = room.makeAction('playerColor')
-  ;[sendEmoji, getEmoji] = room.makeAction('emoji')
-  ;[sendDiceSettings, getDiceSettings] = room.makeAction('diceSettings')
 
-  document.querySelector('#room-num').innerText = `Room: ${roomName}`
+  // Create bidirectional action channels
+  const [sendRollFn, getRoll] = room.makeAction('diceRoll')
+  const [sendNameFn, getName] = room.makeAction('playerName')
+  const [sendMoveFn, getMove] = room.makeAction('mouseMove')
+  const [sendColorFn, getColor] = room.makeAction('playerColor')
+  const [sendEmojiFn, getEmoji] = room.makeAction('emoji')
+  const [sendDiceSettingsFn, getDiceSettings] = room.makeAction('diceSettings')
 
-  room.onPeerJoin(peerId => {
-    sendName(peerNames[selfId], peerId)
-    sendColor(peerColors[selfId], peerId)
-    if (peerDiceSettings[selfId]) {
-      sendDiceSettings(peerDiceSettings[selfId], peerId)
-    }
-    addCursor(peerId)
-    if (sendMove) {
-      sendMove([Math.random() * 0.93, Math.random() * 0.93], peerId)
-    }
-    updatePeerCount()
-  })
+  // Store send functions in exported network object
+  network.sendRoll = sendRollFn
+  network.sendName = sendNameFn
+  network.sendMove = sendMoveFn
+  network.sendColor = sendColorFn
+  network.sendEmoji = sendEmojiFn
+  network.sendDiceSettings = sendDiceSettingsFn
 
-  room.onPeerLeave(peerId => {
-    delete peerNames[peerId]
-    delete peerColors[peerId]
-    delete peerDiceSettings[peerId]
-    removeCursor(peerId)
-    updatePeerCount()
-  })
+  return {getRoll, getName, getMove, getColor, getEmoji, getDiceSettings}
+}
+
+/**
+ * Sets up peer event handlers (join/leave)
+ */
+function setupPeerHandlers() {
+  room.onPeerJoin(handlePeerJoin)
+  room.onPeerLeave(handlePeerLeave)
+}
+
+/**
+ * Registers action receivers with their callbacks
+ * @param {Object} receivers - Object containing get functions from connectToRoom
+ * @param {Function} onRollReceived - Callback for incoming rolls
+ */
+function registerActionHandlers(receivers, onRollReceived) {
+  const {getRoll, getName, getMove, getColor, getEmoji, getDiceSettings} = receivers
 
   getRoll(onRollReceived)
+
   getName((name, peerId) => {
     peerNames[peerId] = name
-    if (cursors[peerId]) {
-      const nameLabel = cursors[peerId].querySelector('p')
-      if (nameLabel) {
-        nameLabel.textContent = name
-      }
-    }
+    updateCursorName(peerId, name)
   })
+
   getColor((color, peerId) => {
     peerColors[peerId] = color
-    if (cursors[peerId]) {
-      const nameLabel = cursors[peerId].querySelector('p')
-      if (nameLabel) {
-        nameLabel.style.borderLeft = `3px solid ${color}`
-      }
-    }
+    updateCursorColor(peerId, color)
   })
+
   getDiceSettings((settings, peerId) => {
     peerDiceSettings[peerId] = settings
   })
+
   getMove(moveCursor)
+
   getEmoji(emoji => {
-    // Find the emoji button on this client and trigger confetti from its position
     const emojiButtons = document.querySelector('emoji-buttons')
     if (emojiButtons?.triggerEmojiConfetti) {
       emojiButtons.triggerEmojiConfetti(emoji)
     } else {
-      // Fallback to random position if button not found
       emitEmojiConfetti(emoji)
     }
   })
+}
 
-  return {sendRoll, sendName, sendMove, sendColor, sendEmoji, sendDiceSettings}
+/**
+ * Called when a peer joins the room
+ */
+function handlePeerJoin(peerId) {
+  // Sync our current state to the new peer
+  network.sendName?.(peerNames[selfId], peerId)
+  network.sendColor?.(peerColors[selfId], peerId)
+
+  if (peerDiceSettings[selfId]) {
+    network.sendDiceSettings?.(peerDiceSettings[selfId], peerId)
+  }
+
+  // Initialize cursor at random position
+  network.sendMove?.([Math.random() * 0.93, Math.random() * 0.93], peerId)
+
+  // UI updates
+  addCursor(peerId)
+  updatePeerCount()
+}
+
+/**
+ * Called when a peer leaves the room
+ */
+function handlePeerLeave(peerId) {
+  // Clean up peer state
+  delete peerNames[peerId]
+  delete peerColors[peerId]
+  delete peerDiceSettings[peerId]
+
+  // UI updates
+  removeCursor(peerId)
+  updatePeerCount()
+}
+
+/**
+ * Main entry point - initializes room connection and event system
+ * @param {string} roomName - The room ID to join
+ * @param {Function} onRollReceived - Callback for incoming dice rolls
+ */
+export function initRoom(roomName, onRollReceived) {
+  // Update UI with room name
+  document.querySelector('#room-num').innerText = `Room: ${roomName}`
+
+  // Connect and setup in order
+  const receivers = connectToRoom(roomName)
+  setupPeerHandlers()
+  registerActionHandlers(receivers, onRollReceived)
 }
 
 // Shared emoji confetti function
@@ -121,41 +173,7 @@ export function emitEmojiConfetti(emoji, x, y) {
   })
 }
 
-export function broadcastRoll(rollData) {
-  if (sendRoll) {
-    sendRoll(rollData)
-  }
-}
-
-export function broadcastName(name) {
-  if (sendName) {
-    sendName(name)
-  }
-}
-
-export function broadcastMove(coords) {
-  if (sendMove) {
-    sendMove(coords)
-  }
-}
-
-export function broadcastColor(color) {
-  if (sendColor) {
-    sendColor(color)
-  }
-}
-
-export function broadcastEmoji(emoji) {
-  if (sendEmoji) {
-    sendEmoji(emoji)
-  }
-}
-
-export function broadcastDiceSettings(settings) {
-  if (sendDiceSettings) {
-    sendDiceSettings(settings)
-  }
-}
+// Broadcast functions removed - use network.sendX() directly from main.js
 
 // Cursor management
 export function addCursor(id, isSelf = false) {
@@ -185,19 +203,44 @@ export function addCursor(id, isSelf = false) {
 }
 
 export function removeCursor(id) {
-  if (cursors[id]) {
-    canvas.removeChild(cursors[id])
-    delete cursors[id]
-  }
+  if (!cursors[id]) return
+
+  canvas.removeChild(cursors[id])
+  delete cursors[id]
 }
 
 export function moveCursor([x, y], id) {
   const el = cursors[id]
+  if (!el || typeof x !== 'number' || typeof y !== 'number') return
 
-  if (el && typeof x === 'number' && typeof y === 'number') {
-    el.style.left = `${x * window.innerWidth}px`
-    el.style.top = `${y * window.innerHeight}px`
-  }
+  el.style.left = `${x * window.innerWidth}px`
+  el.style.top = `${y * window.innerHeight}px`
+}
+
+/**
+ * Updates a peer's cursor name display
+ */
+function updateCursorName(peerId, name) {
+  const cursor = cursors[peerId]
+  if (!cursor) return
+
+  const nameLabel = cursor.querySelector('p')
+  if (!nameLabel) return
+
+  nameLabel.textContent = name
+}
+
+/**
+ * Updates a peer's cursor color display
+ */
+function updateCursorColor(peerId, color) {
+  const cursor = cursors[peerId]
+  if (!cursor) return
+
+  const nameLabel = cursor.querySelector('p')
+  if (!nameLabel) return
+
+  nameLabel.style.borderLeft = `3px solid ${color}`
 }
 
 function updatePeerCount() {

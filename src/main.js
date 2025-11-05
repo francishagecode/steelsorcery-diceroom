@@ -1,12 +1,9 @@
 import {
   addCursor,
-  broadcastColor,
-  broadcastDiceSettings,
-  broadcastMove,
-  broadcastName,
   displayRollInHistory,
   initRoom,
   moveCursor,
+  network,
   peerColors,
   peerDiceSettings,
   peerNames,
@@ -97,32 +94,32 @@ function createNewRoom() {
 }
 
 function simpleMD5Hash(str) {
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i)
-    hash = (hash << 5) - hash + char
-    hash = hash & hash
-  }
+  const hash = [...str].reduce((acc, char) => {
+    const code = char.charCodeAt(0)
+    const newHash = ((acc << 5) - acc + code) & acc
+    return newHash
+  }, 0)
+
   return Math.abs(hash).toString(16).substring(0, 8)
 }
 
 document.querySelector('#name-btn').addEventListener('click', () => {
   const newName = prompt('Enter your name:', myName)
-  if (newName?.trim()) {
-    myName = newName.trim()
-    peerNames[selfId] = myName
-    localStorage.setItem('playerName', myName)
+  if (!newName?.trim()) return
 
-    const cursorEl = document.querySelector(`#cursor-${selfId}`)
-    if (cursorEl) {
-      const labelEl = cursorEl.querySelector('p')
-      if (labelEl) {
-        labelEl.textContent = myName
-      }
+  myName = newName.trim()
+  peerNames[selfId] = myName
+  localStorage.setItem('playerName', myName)
+
+  const cursorEl = document.querySelector(`#cursor-${selfId}`)
+  if (cursorEl) {
+    const labelEl = cursorEl.querySelector('p')
+    if (labelEl) {
+      labelEl.textContent = myName
     }
-
-    broadcastName(myName)
   }
+
+  network.sendName?.(myName)
 })
 
 diceSettingsEl.addEventListener('color-change', async (e) => {
@@ -130,21 +127,21 @@ diceSettingsEl.addEventListener('color-change', async (e) => {
   peerColors[selfId] = color
 
   await diceBoxEl.reinitialize(color)
-  broadcastColor(color)
+  network.sendColor?.(color)
 })
 
 addEventListener('mousemove', ({ clientX, clientY }) => {
   const x = clientX / innerWidth
   const y = clientY / innerHeight
   moveCursor([x, y], selfId)
-  broadcastMove([x, y])
+  network.sendMove?.([x, y])
 })
 
 addEventListener('touchmove', (e) => {
   const x = e.touches[0].clientX / innerWidth
   const y = e.touches[0].clientY / innerHeight
   moveCursor([x, y], selfId)
-  broadcastMove([x, y])
+  network.sendMove?.([x, y])
 })
 
 diceSettingsEl.addEventListener('label-color-change', async (e) => {
@@ -152,7 +149,7 @@ diceSettingsEl.addEventListener('label-color-change', async (e) => {
   peerDiceSettings[selfId].labelColor = labelColor
   const currentSettings = diceSettingsEl.getSettings()
   await diceBoxEl.updateConfig({ labelColor }, currentSettings.color)
-  broadcastDiceSettings(peerDiceSettings[selfId])
+  network.sendDiceSettings?.(peerDiceSettings[selfId])
 })
 
 diceSettingsEl.addEventListener('material-change', async (e) => {
@@ -160,7 +157,7 @@ diceSettingsEl.addEventListener('material-change', async (e) => {
   peerDiceSettings[selfId].material = material
   const currentSettings = diceSettingsEl.getSettings()
   await diceBoxEl.updateConfig({ material }, currentSettings.color)
-  broadcastDiceSettings(peerDiceSettings[selfId])
+  network.sendDiceSettings?.(peerDiceSettings[selfId])
 })
 
 diceSettingsEl.addEventListener('texture-change', async (e) => {
@@ -168,7 +165,7 @@ diceSettingsEl.addEventListener('texture-change', async (e) => {
   peerDiceSettings[selfId].texture = texture
   const currentSettings = diceSettingsEl.getSettings()
   await diceBoxEl.updateConfig({ texture }, currentSettings.color)
-  broadcastDiceSettings(peerDiceSettings[selfId])
+  network.sendDiceSettings?.(peerDiceSettings[selfId])
 })
 
 addEventListener('hashchange', () => {

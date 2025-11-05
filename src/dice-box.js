@@ -74,7 +74,9 @@ export class DiceBoxComponent extends HTMLElement {
   async updateConfig(config, color) {
     this.currentConfig = { ...this.currentConfig, ...config, color }
     const needsReinit = !this.instanceCache.has(this.getConfigKey())
-    if (needsReinit) await this.initializeDiceBox()
+    if (!needsReinit) return
+
+    await this.initializeDiceBox()
   }
 
   async roll(rollData, color, settings = {}) {

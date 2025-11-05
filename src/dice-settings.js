@@ -47,13 +47,8 @@ export class DiceSettings extends HTMLElement {
     const openBtn = document.querySelector('#dice-settings-btn')
     const closeBtn = this.querySelector('#close-dialog-btn')
 
-    if (openBtn) {
-      openBtn.addEventListener('click', () => dialog.showModal())
-    }
-
-    if (closeBtn) {
-      closeBtn.addEventListener('click', () => dialog.close())
-    }
+    openBtn?.addEventListener('click', () => dialog.showModal())
+    closeBtn?.addEventListener('click', () => dialog.close())
 
     this.querySelector('#color-picker').addEventListener('input', e => {
       this.myColor = e.target.value

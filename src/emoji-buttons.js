@@ -1,4 +1,4 @@
-import { broadcastEmoji, emitEmojiConfetti } from './network.js'
+import { emitEmojiConfetti, network } from './network.js'
 
 class EmojiButtons extends HTMLElement {
   connectedCallback() {
@@ -14,7 +14,7 @@ class EmojiButtons extends HTMLElement {
 
         this.triggerEmojiConfetti(emoji)
 
-        broadcastEmoji(emoji)
+        network.sendEmoji?.(emoji)
       })
     })
   }

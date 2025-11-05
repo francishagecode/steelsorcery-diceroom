@@ -1,6 +1,6 @@
 import {
-  broadcastRoll,
   displayRollInHistory,
+  network,
   peerColors,
   selfId
 } from './network.js'
@@ -40,7 +40,9 @@ class DicePool extends HTMLElement {
   removeDieFromPool(dieId) {
     this.modifyPool(() => {
       const index = pool.findIndex(d => d.id === dieId)
-      if (index !== -1) pool.splice(index, 1)
+      if (index === -1) return
+
+      pool.splice(index, 1)
     })
   }
 
@@ -143,7 +145,7 @@ class DicePool extends HTMLElement {
       timestamp: Date.now()
     }
 
-    broadcastRoll(rollData)
+    network.sendRoll?.(rollData)
 
     const diceBoxEl = document.querySelector('dice-box')
     await diceBoxEl.roll(rollData, peerColors[selfId])
