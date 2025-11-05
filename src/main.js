@@ -96,7 +96,8 @@ function createNewRoom() {
 function simpleMD5Hash(str) {
   const hash = [...str].reduce((acc, char) => {
     const code = char.charCodeAt(0)
-    const newHash = ((acc << 5) - acc + code) & acc
+    let newHash = (acc << 5) - acc + code
+    newHash = newHash & newHash
     return newHash
   }, 0)
 

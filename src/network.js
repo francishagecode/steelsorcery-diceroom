@@ -1,6 +1,7 @@
 import {joinRoom, selfId} from 'trystero/supabase' // (trystero-supabase.min.js)
 const rollHistory = document.querySelector('#roll-history')
 const peerCountEl = document.querySelector('#peer-count')
+const canvas = document.querySelector('#canvas')
 
 export {selfId}
 
@@ -24,7 +25,13 @@ export const network = {
 const config = {
   appId: 'https://qedpxdusplakbbdmkqke.supabase.co',
   supabaseKey:
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZHB4ZHVzcGxha2JiZG1rcWtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MTc1NDgsImV4cCI6MjA3NzM5MzU0OH0.pM8IdSC8oFb1IxDYm84yLBigG-CiRTcK8A58XtGqLb0'
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZHB4ZHVzcGxha2JiZG1rcWtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MTc1NDgsImV4cCI6MjA3NzM5MzU0OH0.pM8IdSC8oFb1IxDYm84yLBigG-CiRTcK8A58XtGqLb0',
+  rtcConfig: {
+    iceServers: [
+      {urls: 'stun:stun.l.google.com:19302'},
+      {urls: 'stun:stun1.l.google.com:19302'}
+    ]
+  }
 }
 
 /**
