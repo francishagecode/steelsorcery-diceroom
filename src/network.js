@@ -1,108 +1,249 @@
-import {joinRoom, selfId} from 'trystero/supabase' // (trystero-supabase.min.js)
+import { createClient } from '@supabase/supabase-js'
+
 const rollHistory = document.querySelector('#roll-history')
 const peerCountEl = document.querySelector('#peer-count')
-const canvas = document.querySelector('#canvas')
 
-export {selfId}
+// Generate a unique self ID
+export const selfId = crypto.randomUUID()
 
 export const peerNames = {}
 export const peerColors = {}
 export const peerDiceSettings = {}
-const cursors = {}
 
-let room = null
+let channel = null
+let supabase = null
 
 // Network action senders - initialized when room connects
 export const network = {
   sendRoll: null,
   sendName: null,
-  sendMove: null,
   sendColor: null,
   sendEmoji: null,
   sendDiceSettings: null
 }
 
-const config = {
-  appId: 'https://qedpxdusplakbbdmkqke.supabase.co',
-  supabaseKey:
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZHB4ZHVzcGxha2JiZG1rcWtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MTc1NDgsImV4cCI6MjA3NzM5MzU0OH0.pM8IdSC8oFb1IxDYm84yLBigG-CiRTcK8A58XtGqLb0'
-}
+const SUPABASE_URL = 'https://qedpxdusplakbbdmkqke.supabase.co'
+const SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZHB4ZHVzcGxha2JiZG1rcWtlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4MTc1NDgsImV4cCI6MjA3NzM5MzU0OH0.pM8IdSC8oFb1IxDYm84yLBigG-CiRTcK8A58XtGqLb0'
 
 /**
  * Joins a room and sets up network actions
  * @param {string} roomName - The room ID to join
- * @returns {Object} The room instance
+ * @returns {Object} Callback registrations
  */
 function connectToRoom(roomName) {
-  console.log('[Network] Connecting to room:', roomName, 'with config:', config)
-  room = joinRoom(config, roomName)
-  console.log('[Network] Room joined, room object:', room)
+  console.log('[Network] Connecting to room:', roomName)
 
-  // Create bidirectional action channels
-  const [sendRollFn, getRoll] = room.makeAction('diceRoll')
-  const [sendNameFn, getName] = room.makeAction('playerName')
-  const [sendMoveFn, getMove] = room.makeAction('mouseMove')
-  const [sendColorFn, getColor] = room.makeAction('playerColor')
-  const [sendEmojiFn, getEmoji] = room.makeAction('emoji')
-  const [sendDiceSettingsFn, getDiceSettings] = room.makeAction('diceSettings')
+  // Initialize Supabase client
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+  // Create a channel for this room (public channel)
+  const topic = `room:${roomName}`
+  channel = supabase.channel(topic, { config: { broadcast: { self: true }, presence: { key: selfId } } })
+
+  console.log('[Network] Channel created:', topic)
+
+  // Callback storage for registering handlers later
+  const callbacks = {
+    onRoll: null,
+    onName: null,
+    onColor: null,
+    onEmoji: null,
+    onDiceSettings: null
+  }
+
+  // Set up broadcast listeners
+  channel
+    .on('broadcast', { event: 'diceRoll' }, ({ payload }) => {
+      const isForMe = !payload.targetPeerId || payload.targetPeerId === selfId
+      if (callbacks.onRoll && payload.peerId !== selfId && isForMe) {
+        callbacks.onRoll(payload.data, payload.peerId)
+      }
+    })
+    .on('broadcast', { event: 'playerName' }, ({ payload }) => {
+      const isForMe = !payload.targetPeerId || payload.targetPeerId === selfId
+      if (callbacks.onName && payload.peerId !== selfId && isForMe) {
+        callbacks.onName(payload.data, payload.peerId)
+      }
+    })
+    .on('broadcast', { event: 'playerColor' }, ({ payload }) => {
+      const isForMe = !payload.targetPeerId || payload.targetPeerId === selfId
+      if (callbacks.onColor && payload.peerId !== selfId && isForMe) {
+        callbacks.onColor(payload.data, payload.peerId)
+      }
+    })
+    .on('broadcast', { event: 'emoji' }, ({ payload }) => {
+      const isForMe = !payload.targetPeerId || payload.targetPeerId === selfId
+      if (callbacks.onEmoji && payload.peerId !== selfId && isForMe) {
+        callbacks.onEmoji(payload.data, payload.peerId)
+      }
+    })
+    .on('broadcast', { event: 'diceSettings' }, ({ payload }) => {
+      const isForMe = !payload.targetPeerId || payload.targetPeerId === selfId
+      if (callbacks.onDiceSettings && payload.peerId !== selfId && isForMe) {
+        callbacks.onDiceSettings(payload.data, payload.peerId)
+      }
+    })
+    .on('presence', { event: 'sync' }, () => {
+      const state = channel.presenceState()
+      console.log('[Network] Presence synced:', state)
+      handlePresenceSync(state)
+    })
+    .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+      console.log('[Network] Presence join:', key, newPresences)
+    })
+    .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+      console.log('[Network] Presence leave:', key, leftPresences)
+    })
+
+  // Subscribe to the channel
+  channel.subscribe(async (status) => {
+    console.log('[Network] Channel status:', status)
+    if (status === 'SUBSCRIBED') {
+      console.log('[Network] Subscribed to', topic)
+      // Track our presence
+      await channel.track({
+        online_at: new Date().toISOString()
+      })
+    }
+  })
+
+  // Store send functions in exported network object
+  network.sendRoll = (data, targetPeerId) => {
+    channel.send({
+      type: 'broadcast',
+      event: 'diceRoll',
+      payload: { data, peerId: selfId, targetPeerId }
+    })
+  }
+
+  network.sendName = (data, targetPeerId) => {
+    channel.send({
+      type: 'broadcast',
+      event: 'playerName',
+      payload: { data, peerId: selfId, targetPeerId }
+    })
+  }
+
+  network.sendColor = (data, targetPeerId) => {
+    channel.send({
+      type: 'broadcast',
+      event: 'playerColor',
+      payload: { data, peerId: selfId, targetPeerId }
+    })
+  }
+
+  network.sendEmoji = (data, targetPeerId) => {
+    channel.send({
+      type: 'broadcast',
+      event: 'emoji',
+      payload: { data, peerId: selfId, targetPeerId }
+    })
+  }
+
+  network.sendDiceSettings = (data, targetPeerId) => {
+    channel.send({
+      type: 'broadcast',
+      event: 'diceSettings',
+      payload: { data, peerId: selfId, targetPeerId }
+    })
+  }
 
   console.log('[Network] Actions created successfully')
 
-  // Store send functions in exported network object
-  network.sendRoll = sendRollFn
-  network.sendName = sendNameFn
-  network.sendMove = sendMoveFn
-  network.sendColor = sendColorFn
-  network.sendEmoji = sendEmojiFn
-  network.sendDiceSettings = sendDiceSettingsFn
-
-  return {getRoll, getName, getMove, getColor, getEmoji, getDiceSettings}
+  return callbacks
 }
 
 /**
- * Sets up peer event handlers (join/leave)
+ * Handles presence state sync - detects new and left peers
  */
-function setupPeerHandlers() {
-  console.log('[Network] Setting up peer handlers')
-  room.onPeerJoin(handlePeerJoin)
-  room.onPeerLeave(handlePeerLeave)
-  console.log('[Network] Current peers:', room.getPeers())
+function handlePresenceSync(state) {
+  const currentPeerIds = Object.keys(state)
+  const knownPeerIds = Object.keys(peerNames).filter(id => id !== selfId)
+
+  console.log('[Network] Current peers:', currentPeerIds)
+  console.log('[Network] Known peers:', knownPeerIds)
+
+  const newPeers = []
+  currentPeerIds.forEach((peerId) => {
+    if (peerId !== selfId && !knownPeerIds.includes(peerId)) {
+      newPeers.push(peerId)
+
+      if (!peerNames[peerId]) {
+        peerNames[peerId] = peerId.slice(0, 8)
+      }
+      if (!peerColors[peerId]) {
+        peerColors[peerId] = '#ffffff'
+      }
+
+      console.log('[Network] New peer detected:', peerId)
+    }
+  })
+
+  knownPeerIds.forEach((peerId) => {
+    if (peerId !== selfId && !currentPeerIds.includes(peerId)) {
+      handlePeerLeave(peerId)
+    }
+  })
+
+  if (newPeers.length > 0) {
+    console.log('[Network] Broadcasting state to new peers:', newPeers)
+
+    network.sendName?.(peerNames[selfId])
+    network.sendColor?.(peerColors[selfId])
+
+    if (peerDiceSettings[selfId]) {
+      network.sendDiceSettings?.(peerDiceSettings[selfId])
+    }
+
+    newPeers.forEach(peerId => {
+      network.sendName?.(peerNames[selfId], peerId)
+      network.sendColor?.(peerColors[selfId], peerId)
+
+      if (peerDiceSettings[selfId]) {
+        network.sendDiceSettings?.(peerDiceSettings[selfId], peerId)
+      }
+    })
+
+    updateUsernameList()
+    updatePeerCount()
+  }
 }
 
 /**
  * Registers action receivers with their callbacks
- * @param {Object} receivers - Object containing get functions from connectToRoom
+ * @param {Object} callbacks - Callback object from connectToRoom
  * @param {Function} onRollReceived - Callback for incoming rolls
  */
-function registerActionHandlers(receivers, onRollReceived) {
-  const {getRoll, getName, getMove, getColor, getEmoji, getDiceSettings} = receivers
+function registerActionHandlers(callbacks, onRollReceived) {
+  callbacks.onRoll = onRollReceived
 
-  getRoll(onRollReceived)
-
-  getName((name, peerId) => {
+  callbacks.onName = (name, peerId) => {
+    console.log('[Network] Received name from', peerId, ':', name)
+    const wasNewPeer = !peerNames[peerId]
     peerNames[peerId] = name
-    updateCursorName(peerId, name)
-  })
+    updateUsernameList()
+    if (wasNewPeer) {
+      updatePeerCount()
+    }
+  }
 
-  getColor((color, peerId) => {
+  callbacks.onColor = (color, peerId) => {
     peerColors[peerId] = color
-    updateCursorColor(peerId, color)
-  })
+  }
 
-  getDiceSettings((settings, peerId) => {
+  callbacks.onDiceSettings = (settings, peerId) => {
     peerDiceSettings[peerId] = settings
-  })
+  }
 
-  getMove(moveCursor)
-
-  getEmoji(emoji => {
+  callbacks.onEmoji = (emoji) => {
     const emojiButtons = document.querySelector('emoji-buttons')
     if (emojiButtons?.triggerEmojiConfetti) {
       emojiButtons.triggerEmojiConfetti(emoji)
     } else {
       emitEmojiConfetti(emoji)
     }
-  })
+  }
 }
 
 /**
@@ -111,7 +252,13 @@ function registerActionHandlers(receivers, onRollReceived) {
 function handlePeerJoin(peerId) {
   console.log('[Network] Peer joined:', peerId)
 
-  // Sync our current state to the new peer
+  if (!peerNames[peerId]) {
+    peerNames[peerId] = peerId.slice(0, 8)
+  }
+  if (!peerColors[peerId]) {
+    peerColors[peerId] = '#ffffff'
+  }
+
   network.sendName?.(peerNames[selfId], peerId)
   network.sendColor?.(peerColors[selfId], peerId)
 
@@ -119,11 +266,7 @@ function handlePeerJoin(peerId) {
     network.sendDiceSettings?.(peerDiceSettings[selfId], peerId)
   }
 
-  // Initialize cursor at random position
-  network.sendMove?.([Math.random() * 0.93, Math.random() * 0.93], peerId)
-
-  // UI updates
-  addCursor(peerId)
+  updateUsernameList()
   updatePeerCount()
 }
 
@@ -139,7 +282,7 @@ function handlePeerLeave(peerId) {
   delete peerDiceSettings[peerId]
 
   // UI updates
-  removeCursor(peerId)
+  updateUsernameList()
   updatePeerCount()
 }
 
@@ -153,9 +296,8 @@ export function initRoom(roomName, onRollReceived) {
   document.querySelector('#room-num').innerText = `Room: ${roomName}`
 
   // Connect and setup in order
-  const receivers = connectToRoom(roomName)
-  setupPeerHandlers()
-  registerActionHandlers(receivers, onRollReceived)
+  const callbacks = connectToRoom(roomName)
+  registerActionHandlers(callbacks, onRollReceived)
 }
 
 // Shared emoji confetti function
@@ -163,13 +305,13 @@ export function emitEmojiConfetti(emoji, x, y) {
   // If no position provided, use random position for peer reactions
   const origin =
     x !== undefined && y !== undefined
-      ? {x, y}
-      : {x: Math.random() * 0.8 + 0.1, y: Math.random() * 0.5 + 0.4}
+      ? { x, y }
+      : { x: Math.random() * 0.8 + 0.1, y: Math.random() * 0.5 + 0.4 }
 
   confetti({
-    particleCount: 3,
+    particleCount: 5,
     spread: 100,
-    startVelocity: 45,
+    startVelocity: 65,
     scalar: 3,
     gravity: 0.5,
     ticks: 200,
@@ -184,78 +326,53 @@ export function emitEmojiConfetti(emoji, x, y) {
   })
 }
 
-// Broadcast functions removed - use network.sendX() directly from main.js
+/**
+ * Updates the username list display in the top bar
+ */
+export function updateUsernameList() {
+  const usernameListEl = document.querySelector('#username-list')
+  if (!usernameListEl) return
 
-// Cursor management
-export function addCursor(id, isSelf = false) {
-  const el = document.createElement('div')
-  const img = document.createElement('img')
-  const txt = document.createElement('p')
+  // Get all peer names including self
+  const allNames = Object.entries(peerNames)
+    .map(([id, name]) => ({
+      id,
+      name,
+      isSelf: id === selfId,
+      color: peerColors[id] || '#ffffff'
+    }))
+    .sort((a, b) => {
+      // Self first, then alphabetically
+      if (a.isSelf) return -1
+      if (b.isSelf) return 1
+      return a.name.localeCompare(b.name)
+    })
 
-  el.className = 'absolute -ml-[10px] -mt-[2px]'
-  el.style.left = el.style.top = '-99px'
-  img.src = 'assets/images/hand.png'
-  img.className = 'w-[34px] h-[46px]'
-  img.style.imageRendering = 'pixelated'
-  txt.className = `text-center text-sm font-bold px-2 py-1 rounded-lg shadow-lg ${isSelf ? 'bg-white/90 text-black' : 'bg-black/90 text-white'}`
-  txt.innerText = peerNames[id] || id.slice(0, 4)
+  // Clear and rebuild the list
+  usernameListEl.innerHTML = ''
 
-  if (!isSelf) {
-    txt.style.borderLeft = `3px solid ${peerColors[id] || '#ffffff'}`
+  if (allNames.length === 0) {
+    usernameListEl.innerHTML = '<span class="text-gray-400 text-sm">No players</span>'
+    return
   }
 
-  el.appendChild(img)
-  el.appendChild(txt)
-  el.id = `cursor-${id}`
-  canvas.appendChild(el)
-  cursors[id] = el
-
-  return el
-}
-
-export function removeCursor(id) {
-  if (!cursors[id]) return
-
-  canvas.removeChild(cursors[id])
-  delete cursors[id]
-}
-
-export function moveCursor([x, y], id) {
-  const el = cursors[id]
-  if (!el || typeof x !== 'number' || typeof y !== 'number') return
-
-  el.style.left = `${x * window.innerWidth}px`
-  el.style.top = `${y * window.innerHeight}px`
-}
-
-/**
- * Updates a peer's cursor name display
- */
-function updateCursorName(peerId, name) {
-  const cursor = cursors[peerId]
-  if (!cursor) return
-
-  const nameLabel = cursor.querySelector('p')
-  if (!nameLabel) return
-
-  nameLabel.textContent = name
-}
-
-/**
- * Updates a peer's cursor color display
- */
-function updateCursorColor(peerId, color) {
-  const cursor = cursors[peerId]
-  if (!cursor) return
-
-  const nameLabel = cursor.querySelector('p')
-  if (!nameLabel) return
-
-  nameLabel.style.borderLeft = `3px solid ${color}`
+  allNames.forEach(({ name, isSelf, color }) => {
+    const nameEl = document.createElement('span')
+    nameEl.className = `text-sm font-medium ${isSelf ? 'text-orange-400' : 'text-white'}`
+    nameEl.style.borderLeft = `3px solid ${color}`
+    nameEl.style.paddingLeft = '0.5rem'
+    nameEl.textContent = isSelf ? `${name} (you)` : name
+    usernameListEl.appendChild(nameEl)
+  })
 }
 
 function updatePeerCount() {
-  const count = Object.keys(room.getPeers()).length
+  if (!channel) return
+
+  const state = channel.presenceState()
+  const peerIds = Object.keys(state).filter((id) => id !== selfId)
+  const count = peerIds.length
+
   peerCountEl.textContent =
     count === 0
       ? 'No peers connected'
@@ -266,14 +383,14 @@ function updatePeerCount() {
 
 // Roll history display
 export function displayRollInHistory(rollData, peerId) {
-  const {results, total, timestamp} = rollData
+  const { results, total, timestamp } = rollData
   const playerName = peerNames[peerId] || peerId.slice(0, 8)
   const isYou = peerId === selfId
+  const displayColor = rollData.color || peerColors[peerId] || '#ffffff'
 
   const rollEl = document.createElement('div')
-  rollEl.className = `bg-black/40 rounded-xl p-4 sm:p-6 lg:p-8 animate-[slideIn_0.3s_ease-out] ${
-    isYou ? 'ring-1 sm:ring-2 ring-white/30' : ''
-  }`
+  rollEl.className = `bg-black/40 rounded-xl p-4 sm:p-6 lg:p-8 animate-[slideIn_0.3s_ease-out] ${isYou ? 'ring-1 sm:ring-2 ring-white/30' : ''
+    }`
 
   const header = document.createElement('div')
   header.className =
@@ -284,7 +401,7 @@ export function displayRollInHistory(rollData, peerId) {
 
   const colorDot = document.createElement('div')
   colorDot.className = 'w-3 h-3 rounded-full flex-shrink-0'
-  colorDot.style.backgroundColor = peerColors[peerId] || '#ffffff'
+  colorDot.style.backgroundColor = displayColor
 
   const player = document.createElement('span')
   player.className = `font-bold text-base sm:text-lg lg:text-xl ${isYou ? 'text-orange-400' : 'text-white'}`

@@ -7,7 +7,6 @@ export class DiceBoxComponent extends HTMLElement {
     super()
     this.diceBox = null
     this.currentConfig = {}
-    this.instanceCache = new Map()
   }
 
   async initialize(color, initialConfig = {}) {
@@ -16,6 +15,9 @@ export class DiceBoxComponent extends HTMLElement {
   }
 
   buildConfig() {
+
+    const scale = (window.innerWidth < 768) ? 75 : 100;
+
     const {
       color,
       labelColor = '#ffffff',
@@ -35,7 +37,7 @@ export class DiceBoxComponent extends HTMLElement {
       },
       light_intensity: 1,
       gravity_multiplier: 400,
-      baseScale: 100,
+      baseScale: scale,
       theme_surface: 'green-felt',
       strength: DEFAULT_STRENGTH,
       shadows: false,
@@ -44,37 +46,26 @@ export class DiceBoxComponent extends HTMLElement {
     }
   }
 
-  getConfigKey() {
-    const { color, labelColor, texture, material } = this.currentConfig
-    return `${color}-${labelColor}-${texture}-${material}`
-  }
-
   async initializeDiceBox() {
-    const configKey = this.getConfigKey()
-
-    if (this.instanceCache.has(configKey)) {
-      this.diceBox = this.instanceCache.get(configKey)
-      return
-    }
-
     this.querySelectorAll('canvas').forEach(canvas => canvas.remove())
 
     this.diceBox = new DiceBox('#dice-box-container', this.buildConfig())
     await this.diceBox.initialize().catch(err => {
       console.error('DiceBox initialization failed:', err)
     })
-
-    this.instanceCache.set(configKey, this.diceBox)
-    if (this.instanceCache.size > 3) {
-      const firstKey = this.instanceCache.keys().next().value
-      this.instanceCache.delete(firstKey)
-    }
   }
 
   async updateConfig(config, color) {
+    const oldConfig = { ...this.currentConfig }
     this.currentConfig = { ...this.currentConfig, ...config, color }
-    const needsReinit = !this.instanceCache.has(this.getConfigKey())
-    if (!needsReinit) return
+
+    const configChanged =
+      oldConfig.color !== this.currentConfig.color ||
+      oldConfig.labelColor !== this.currentConfig.labelColor ||
+      oldConfig.texture !== this.currentConfig.texture ||
+      oldConfig.material !== this.currentConfig.material
+
+    if (!configChanged) return
 
     await this.initializeDiceBox()
   }

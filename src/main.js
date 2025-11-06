@@ -1,25 +1,20 @@
 import {
-  addCursor,
   displayRollInHistory,
   initRoom,
-  moveCursor,
   network,
   peerColors,
   peerDiceSettings,
   peerNames,
   selfId,
+  updateUsernameList,
 } from './network.js'
 import './emoji-buttons.js'
 import './dice-pool.js'
 import './dice-settings.js'
 import './dice-box.js'
 
-console.log('=== MAIN.JS STARTED, IMPORTS COMPLETE ===')
-
 const roomId = window.location.hash.slice(1) || 'main'
 console.log('Room ID:', roomId)
-
-const _defaultColors = ['#dc143c', '#ffd700', '#4169e1', '#32cd32']
 
 let myName = localStorage.getItem('playerName')
 if (!myName) {
@@ -47,20 +42,27 @@ await diceBoxEl.initialize(settings.color, {
   texture: settings.texture,
 })
 
+updateUsernameList()
+
 async function handleIncomingRoll(rollData, peerId) {
-  const rollerColor = peerColors[peerId] || '#ffffff'
-  const strength = rollData.strength || 11
-  const settings = peerDiceSettings[peerId] || {}
-  await diceBoxEl.roll(rollData, rollerColor, strength, settings)
+  const rollerColor = rollData.color || peerColors[peerId] || '#ffffff'
+  const settings = rollData.settings || peerDiceSettings[peerId] || {}
+
+  if (rollData.color && !peerColors[peerId]) {
+    peerColors[peerId] = rollData.color
+  }
+  if (rollData.settings && !peerDiceSettings[peerId]) {
+    peerDiceSettings[peerId] = rollData.settings
+  }
+
+  await diceBoxEl.roll(rollData, rollerColor, settings)
   displayRollInHistory(rollData, peerId)
 }
 
-// Initialize room and networking
 try {
   console.log('Initializing room...')
   initRoom(roomId, handleIncomingRoll)
   document.documentElement.className = 'ready'
-  addCursor(selfId, true)
   console.log('Room initialized successfully')
 } catch (error) {
   console.error('Failed to initialize room:', error)
@@ -68,7 +70,6 @@ try {
   document.documentElement.className = 'ready'
 }
 
-// Create new room button
 document.querySelector('#create-room-btn').addEventListener('click', createNewRoom)
 
 function createNewRoom() {
@@ -112,14 +113,7 @@ document.querySelector('#name-btn').addEventListener('click', () => {
   peerNames[selfId] = myName
   localStorage.setItem('playerName', myName)
 
-  const cursorEl = document.querySelector(`#cursor-${selfId}`)
-  if (cursorEl) {
-    const labelEl = cursorEl.querySelector('p')
-    if (labelEl) {
-      labelEl.textContent = myName
-    }
-  }
-
+  updateUsernameList()
   network.sendName?.(myName)
 })
 
@@ -127,22 +121,9 @@ diceSettingsEl.addEventListener('color-change', async (e) => {
   const { color } = e.detail
   peerColors[selfId] = color
 
-  await diceBoxEl.reinitialize(color)
+  const currentSettings = diceSettingsEl.getSettings()
+  await diceBoxEl.updateConfig({ color: currentSettings.color }, color)
   network.sendColor?.(color)
-})
-
-addEventListener('mousemove', ({ clientX, clientY }) => {
-  const x = clientX / innerWidth
-  const y = clientY / innerHeight
-  moveCursor([x, y], selfId)
-  network.sendMove?.([x, y])
-})
-
-addEventListener('touchmove', (e) => {
-  const x = e.touches[0].clientX / innerWidth
-  const y = e.touches[0].clientY / innerHeight
-  moveCursor([x, y], selfId)
-  network.sendMove?.([x, y])
 })
 
 diceSettingsEl.addEventListener('label-color-change', async (e) => {

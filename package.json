@@ -10,7 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "@3d-dice/dice-box-threejs": "^0.0.6",
-    "trystero": "^0.21.8"
+    "@supabase/supabase-js": "^2.80.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.5",

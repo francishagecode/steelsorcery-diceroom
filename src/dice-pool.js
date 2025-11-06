@@ -2,6 +2,7 @@ import {
   displayRollInHistory,
   network,
   peerColors,
+  peerDiceSettings,
   selfId
 } from './network.js'
 
@@ -34,7 +35,7 @@ class DicePool extends HTMLElement {
   }
 
   addDieToPool(sides) {
-    this.modifyPool(() => pool.push({id: Date.now() + Math.random(), sides}))
+    this.modifyPool(() => pool.push({ id: Date.now() + Math.random(), sides }))
   }
 
   removeDieFromPool(dieId) {
@@ -137,18 +138,23 @@ class DicePool extends HTMLElement {
 
     const total = results.reduce((sum, r) => sum + r.value, 0)
 
+    const settings = peerDiceSettings[selfId] || {}
+    const color = peerColors[selfId]
+
     const rollData = {
       peerId: selfId,
       dice: diceToRoll.map(d => d.sides),
       results,
       total,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      color,
+      settings
     }
 
     network.sendRoll?.(rollData)
 
     const diceBoxEl = document.querySelector('dice-box')
-    await diceBoxEl.roll(rollData, peerColors[selfId])
+    await diceBoxEl.roll(rollData, color, settings)
 
     displayRollInHistory(rollData, selfId)
 
