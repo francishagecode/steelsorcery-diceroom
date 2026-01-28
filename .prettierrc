@@ -1,10 +1,8 @@
 {
-  "semi": false,
-  "printWidth": 80,
-  "tabWidth": 2,
+
+  "printWidth": 100,
   "singleQuote": true,
-  "bracketSpacing": false,
-  "arrowParens": "avoid",
-  "endOfLine": "lf",
-  "trailingComma": "none"
+  "trailingComma": "es5",
+  "xmlWhitespaceSensitivity": "ignore",
+
 }

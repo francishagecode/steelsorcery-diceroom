@@ -1,10 +1,10 @@
-import commonJs from '@rollup/plugin-commonjs'
-import resolve from '@rollup/plugin-node-resolve'
-import replace from '@rollup/plugin-replace'
-import terser from '@rollup/plugin-terser'
+import commonJs from '@rollup/plugin-commonjs';
+import resolve from '@rollup/plugin-node-resolve';
+import replace from '@rollup/plugin-replace';
+import terser from '@rollup/plugin-terser';
 
-const ecma = 2019
-const nodeEnv = '"production"'
+const ecma = 2019;
+const nodeEnv = '"production"';
 
 export default {
   input: 'src/main.js',
@@ -39,4 +39,4 @@ export default {
       mangle: false,
     }),
   ],
-}
+};

@@ -1,166 +1,297 @@
-import {
-  displayRollInHistory,
-  network,
-  peerColors,
-  peerDiceSettings,
-  selfId
-} from './network.js'
+import PubSub from 'pubsub-js';
+import { selfId, network } from './network.js';
+import { DICE_TYPES } from './config/dice-config.js';
+import './components/dice-button.js';
+import './components/pool-die.js';
 
-const pool = []
-
-const DICE_STYLES = {
-  2: 'bg-dice-2 text-white',
-  4: 'bg-dice-4 text-black',
-  6: 'bg-dice-6 text-white',
-  8: 'bg-dice-8 text-white',
-  10: 'bg-dice-10 text-white',
-  12: 'bg-dice-12 text-black',
-  20: 'bg-dice-20 text-black'
-}
-
-const BASE_DIE_CLASSES =
-  'w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] lg:w-[70px] lg:h-[70px] text-base sm:text-lg font-bold border-2 sm:border-[3px] border-black rounded-lg sm:rounded-xl cursor-pointer transition-all shadow-[0_3px_6px_rgb(0_0_0/0.3)] hover:scale-110 hover:shadow-[0_5px_10px_rgb(255_255_255/0.3)] hover:border-white'
+const pool = [];
+let poolSyncInitialized = false;
 
 class DicePool extends HTMLElement {
   connectedCallback() {
-    this.dicePoolEl = this.querySelector('#dice-pool')
-    this.rollPoolBtn = this.querySelector('#roll-pool-btn')
-    this.attachEventListeners()
+    this.render();
+    this.cacheElements();
+    this.attachEventListeners();
+
+    if (!poolSyncInitialized) {
+      this.setupPoolSync();
+      poolSyncInitialized = true;
+    }
   }
 
-  modifyPool(operation, ...args) {
-    operation(...args)
-    this.renderPool()
-    this.updateRollButton()
+  render() {
+    this.innerHTML = `
+      <div class="bg-black/40 rounded-xl p-4 sm:p-6 lg:p-8">
+        <div class="flex gap-4 text-sm mb-4 sm:mb-6 font-bold text-white text-center justify-center">
+          <span class="flex items-center gap-2">
+            <kbd class="bg-black text-[10px] p-1 px-1.5 rounded-lg text-white">Left click</kbd>
+            Add to Pool
+          </span>
+          <span>|</span>
+          <span class="flex items-center gap-2">
+            <kbd class="bg-black text-[10px] p-1 px-1.5 rounded-lg text-white">Right click</kbd>
+            Insta-roll
+          </span>
+        </div>
+        <div class="flex gap-1.5 sm:gap-2 flex-wrap justify-center" id="dice-buttons">
+          ${DICE_TYPES.map((sides) => `<dice-button sides="${sides}"></dice-button>`).join('')}
+        </div>
+      </div>
+
+      <div class="bg-black/40 rounded-xl p-4 sm:p-6 lg:p-8 min-h-[120px] sm:min-h-[150px]">
+        <div id="pool-summary" class="text-lg sm:text-xl lg:text-2xl font-bold text-center py-2 sm:py-3 min-h-[2rem] sm:min-h-[2.8rem] empty:hidden text-white"></div>
+        <div id="dice-pool" class="flex gap-1 flex-wrap min-h-[50px] sm:min-h-[60px] p-3 sm:p-4 bg-black/30 rounded-lg justify-center"></div>
+        <button id="roll-pool-btn" disabled
+          class="w-full py-3 sm:py-4 lg:py-5 text-lg sm:text-xl lg:text-2xl font-semibold text-white rounded-lg cursor-pointer transition-colors bg-[#1e3a5f] hover:bg-[#2a4d7f] disabled:bg-black/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-black/30">
+          Roll Pool
+        </button>
+      </div>
+    `;
+  }
+
+  cacheElements() {
+    this.dicePoolEl = this.querySelector('#dice-pool');
+    this.rollPoolBtn = this.querySelector('#roll-pool-btn');
+    this.summaryEl = this.querySelector('#pool-summary');
+  }
+
+  setupPoolSync() {
+    PubSub.subscribe('room:connected', () => {
+      setTimeout(() => PubSub.publish('pool:sync:request'), 500);
+    });
+
+    PubSub.subscribe('peer:joined', () => {
+      const myDice = pool.filter((d) => d.peerId === selfId);
+      if (myDice.length > 0) {
+        PubSub.publish('pool:sync:send', myDice);
+      }
+    });
+
+    PubSub.subscribe('pool:sync:requested', () => {
+      const myDice = pool.filter((d) => d.peerId === selfId);
+      if (myDice.length > 0) {
+        PubSub.publish('pool:sync:send', myDice);
+      }
+    });
+
+    PubSub.subscribe('pool:sync:received', (_, dice) => {
+      if (!dice || !Array.isArray(dice)) return;
+      let changed = false;
+      dice.forEach((die) => {
+        if (!pool.find((d) => d.id === die.id)) {
+          pool.push(die);
+          changed = true;
+        }
+      });
+      if (changed) {
+        this.renderPool();
+        this.updateRollButton();
+      }
+    });
+
+    PubSub.subscribe('pool:add', (_, die) => {
+      if (die?.peerId === selfId) return;
+      if (!die?.sides) return;
+      pool.push(die);
+      this.renderPool();
+      this.updateRollButton();
+    });
+
+    PubSub.subscribe('pool:remove', (_, { dieId, peerId }) => {
+      if (peerId === selfId) return;
+      const index = pool.findIndex((d) => d.id === dieId);
+      if (index !== -1) {
+        pool.splice(index, 1);
+        this.renderPool();
+        this.updateRollButton();
+      }
+    });
+
+    PubSub.subscribe('pool:clear', (_, { peerId }) => {
+      if (peerId === selfId) return;
+      let changed = false;
+      for (let i = pool.length - 1; i >= 0; i--) {
+        if (pool[i].peerId === peerId) {
+          pool.splice(i, 1);
+          changed = true;
+        }
+      }
+      if (changed) {
+        this.renderPool();
+        this.updateRollButton();
+      }
+    });
+
+    PubSub.subscribe('roll:received', (_, { rollData, peerId }) => {
+      if (peerId === selfId || !rollData?.rolledDiceIds) return;
+      let changed = false;
+      for (let i = pool.length - 1; i >= 0; i--) {
+        if (rollData.rolledDiceIds.includes(pool[i].id)) {
+          pool.splice(i, 1);
+          changed = true;
+        }
+      }
+      if (changed) {
+        this.renderPool();
+        this.updateRollButton();
+      }
+    });
+  }
+
+  attachEventListeners() {
+    PubSub.subscribe('dice:add', (_, { sides }) => this.addDieToPool(sides));
+    PubSub.subscribe('dice:quickroll', (_, { sides }) => {
+      this.clearPool();
+      this.addDieToPool(sides);
+      setTimeout(() => pool.length > 0 && this.handleRollPool(), 50);
+    });
+
+    this.rollPoolBtn?.addEventListener('click', () => this.handleRollPool());
   }
 
   addDieToPool(sides) {
-    this.modifyPool(() => pool.push({ id: Date.now() + Math.random(), sides }))
+    const peer = network.getPeer(selfId);
+    const die = {
+      id: Date.now() + Math.random(),
+      sides,
+      peerId: selfId,
+      playerName: peer?.name || selfId.slice(0, 8),
+      color: peer?.color || '#ffffff',
+    };
+
+    pool.push(die);
+    this.renderPool();
+    this.updateRollButton();
+    PubSub.publish('pool:add:broadcast', die);
   }
 
   removeDieFromPool(dieId) {
-    this.modifyPool(() => {
-      const index = pool.findIndex(d => d.id === dieId)
-      if (index === -1) return
+    const index = pool.findIndex((d) => d.id === dieId);
+    if (index === -1) return;
 
-      pool.splice(index, 1)
-    })
+    pool.splice(index, 1);
+    this.renderPool();
+    this.updateRollButton();
+    PubSub.publish('pool:remove:broadcast', { dieId, peerId: selfId });
   }
 
   clearPool() {
-    this.modifyPool(() => (pool.length = 0))
-  }
+    const myDice = pool.filter((d) => d.peerId === selfId);
 
-  createDieElement(die) {
-    const btn = document.createElement('button')
-    btn.className = `${BASE_DIE_CLASSES} ${DICE_STYLES[die.sides]}`
-    btn.textContent = `d${die.sides}`
-    btn.addEventListener('click', () => this.removeDieFromPool(die.id))
-    return btn
+    for (let i = pool.length - 1; i >= 0; i--) {
+      if (pool[i].peerId === selfId) {
+        pool.splice(i, 1);
+      }
+    }
+    this.renderPool();
+    this.updateRollButton();
+
+    if (myDice.length > 0) {
+      PubSub.publish('pool:clear:broadcast');
+    }
   }
 
   renderPool() {
     if (pool.length === 0) {
       this.dicePoolEl.innerHTML =
-        '<div class="w-full text-center text-gray-500 text-lg p-4 italic">Pool is empty. Click dice above to add them.</div>'
-      this.updatePoolSummary()
-      return
+        '<div class="w-full text-center text-gray-500 text-lg p-4 italic">Pool is empty. Click dice above to add them.</div>';
+      this.updatePoolSummary();
+      return;
     }
 
-    this.dicePoolEl.innerHTML = ''
-    pool.forEach(die => this.dicePoolEl.appendChild(this.createDieElement(die)))
-    this.updatePoolSummary()
+    this.dicePoolEl.innerHTML = '';
+    pool.forEach((die) => {
+      const poolDie = document.createElement('pool-die');
+      poolDie.setAttribute('sides', die.sides);
+      poolDie.setAttribute('color', die.color);
+      poolDie.setAttribute('owner', die.playerName);
+      poolDie.addEventListener('click', () => this.removeDieFromPool(die.id));
+      this.dicePoolEl.appendChild(poolDie);
+    });
+    this.updatePoolSummary();
   }
 
   updatePoolSummary() {
-    const summaryEl = document.querySelector('#pool-summary')
-
     if (pool.length === 0) {
-      summaryEl.textContent = ''
-      return
+      this.summaryEl.textContent = '';
+      return;
     }
 
     const grouped = pool.reduce((acc, die) => {
-      acc[die.sides] = (acc[die.sides] || 0) + 1
-      return acc
-    }, {})
+      acc[die.sides] = (acc[die.sides] || 0) + 1;
+      return acc;
+    }, {});
 
-    summaryEl.textContent = Object.keys(grouped)
+    this.summaryEl.textContent = Object.keys(grouped)
       .sort((a, b) => a - b)
-      .map(sides => `${grouped[sides]}d${sides}`)
-      .join(', ')
+      .map((sides) => `${grouped[sides]}d${sides}`)
+      .join(', ');
   }
 
   updateRollButton() {
-    this.rollPoolBtn.disabled = pool.length === 0
+    this.rollPoolBtn.disabled = pool.length === 0;
     this.rollPoolBtn.textContent =
-      pool.length === 0
-        ? 'Roll Pool'
-        : `Roll ${pool.length} ${pool.length === 1 ? 'Die' : 'Dice'}`
-  }
-
-  attachEventListeners() {
-    this.querySelectorAll('.dice-type-btn').forEach(btn => {
-      btn.addEventListener('click', () =>
-        this.addDieToPool(parseInt(btn.dataset.sides, 10))
-      )
-
-      btn.addEventListener('contextmenu', e => {
-        e.preventDefault()
-        this.clearPool()
-        this.addDieToPool(parseInt(btn.dataset.sides, 10))
-        setTimeout(() => pool.length > 0 && this.handleRollPool(), 50)
-      })
-    })
-
-    if (this.rollPoolBtn) {
-      this.rollPoolBtn.addEventListener('click', () => this.handleRollPool())
-    }
+      pool.length === 0 ? 'Roll Pool' : `Roll ${pool.length} ${pool.length === 1 ? 'Die' : 'Dice'}`;
   }
 
   rollDie(die) {
-    return Math.floor(Math.random() * die.sides) + 1
+    return Math.floor(Math.random() * die.sides) + 1;
   }
 
   async handleRollPool() {
-    if (pool.length === 0) return
+    if (pool.length === 0) return;
 
-    this.rollPoolBtn.disabled = true
-    this.rollPoolBtn.textContent = 'Rolling...'
+    this.rollPoolBtn.disabled = true;
+    this.rollPoolBtn.textContent = 'Rolling...';
 
-    const diceToRoll = [...pool]
-    this.clearPool()
+    const diceToRoll = [...pool];
+    const rolledDiceIds = diceToRoll.map((d) => d.id);
 
-    const results = diceToRoll.map(die => ({
-      sides: die.sides,
-      value: this.rollDie(die)
-    }))
+    pool.length = 0;
+    this.renderPool();
 
-    const total = results.reduce((sum, r) => sum + r.value, 0)
+    const resultsByPlayer = {};
+    diceToRoll.forEach((die) => {
+      if (!resultsByPlayer[die.peerId]) {
+        resultsByPlayer[die.peerId] = {
+          playerName: die.playerName,
+          color: die.color,
+          dice: [],
+          results: [],
+        };
+      }
 
-    const settings = peerDiceSettings[selfId] || {}
-    const color = peerColors[selfId]
+      const value = this.rollDie(die);
+      resultsByPlayer[die.peerId].dice.push(die.sides);
+      resultsByPlayer[die.peerId].results.push({
+        sides: die.sides,
+        value,
+        peerId: die.peerId,
+        color: die.color,
+      });
+    });
+
+    Object.keys(resultsByPlayer).forEach((peerId) => {
+      const playerData = resultsByPlayer[peerId];
+      playerData.total = playerData.results.reduce((sum, r) => sum + r.value, 0);
+    });
+
+    const overallTotal = Object.values(resultsByPlayer).reduce((sum, player) => sum + player.total, 0);
 
     const rollData = {
-      peerId: selfId,
-      dice: diceToRoll.map(d => d.sides),
-      results,
-      total,
       timestamp: Date.now(),
-      color,
-      settings
-    }
+      resultsByPlayer,
+      overallTotal,
+      isGroupRoll: Object.keys(resultsByPlayer).length > 1,
+      rolledDiceIds,
+    };
 
-    network.sendRoll?.(rollData)
+    PubSub.publish('roll:send', rollData);
+    PubSub.publish('roll:animate', { rollData });
 
-    const diceBoxEl = document.querySelector('dice-box')
-    await diceBoxEl.roll(rollData, color, settings)
-
-    displayRollInHistory(rollData, selfId)
-
-    this.rollPoolBtn.disabled = false
-    this.updateRollButton()
+    this.rollPoolBtn.disabled = false;
+    this.updateRollButton();
   }
 }
 
-customElements.define('dice-pool', DicePool)
+customElements.define('dice-pool', DicePool);

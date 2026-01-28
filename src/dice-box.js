@@ -1,107 +1,146 @@
-import DiceBox from '@3d-dice/dice-box-threejs'
+import DiceBox from '@3d-dice/dice-box-threejs';
+import PubSub from 'pubsub-js';
+import { network } from './network.js';
 
-const DEFAULT_STRENGTH = 8
+const SINGLE_STRENGTH = 2;
+const GROUP_STRENGTH = 1;
+const SINGLE_GRAVITY = 500;
+const GROUP_GRAVITY = 600;
 
 export class DiceBoxComponent extends HTMLElement {
-  constructor() {
-    super()
-    this.diceBox = null
-    this.currentConfig = {}
+  connectedCallback() {
+    this.diceBoxInstances = [];
+    this.currentConfig = {};
+
+    this.subscriptions = [
+      PubSub.subscribe('roll:animate', async (_, { rollData }) => {
+        await this.rollDice(rollData);
+      }),
+      PubSub.subscribe('roll:received', async (_, { rollData }) => {
+        await this.rollDice(rollData);
+      }),
+      PubSub.subscribe('diceConfig:update', async (_, settings) => {
+        this.currentConfig = { ...settings };
+      }),
+    ];
+  }
+
+  disconnectedCallback() {
+    this.subscriptions?.forEach((token) => PubSub.unsubscribe(token));
+    this.cleanup();
   }
 
   async initialize(color, initialConfig = {}) {
-    this.currentConfig = { color, ...initialConfig }
-    await this.initializeDiceBox()
+    this.currentConfig = { color, ...initialConfig };
   }
 
-  buildConfig() {
+  async rollDice(rollData) {
+    this.cleanup();
+    this.innerHTML = '';
 
-    const scale = (window.innerWidth < 768) ? 75 : 100;
+    const peerIds = Object.keys(rollData.resultsByPlayer);
+    const numPlayers = peerIds.length;
+    const isSingle = numPlayers === 1;
 
-    const {
-      color,
-      labelColor = '#ffffff',
-      outlineColor = '#000000',
-      texture = '',
-      material = 'plastic',
-    } = this.currentConfig
+    this.className = isSingle
+      ? 'grid grid-cols-1'
+      : this.getGridClass(numPlayers);
 
-    return {
-      assetPath: './',
-      theme_customColorset: {
-        background: color,
-        foreground: labelColor,
-        outline: outlineColor,
-        texture,
-        material
-      },
-      light_intensity: 1,
-      gravity_multiplier: 400,
-      baseScale: scale,
-      theme_surface: 'green-felt',
-      strength: DEFAULT_STRENGTH,
-      shadows: false,
-      sounds: true,
-      onRollComplete: results => console.log('Roll complete:', results)
-    }
+    const rollPromises = peerIds.map((peerId) =>
+      this.createPlayerDiceBox(peerId, rollData.resultsByPlayer[peerId], numPlayers)
+    );
+
+    await Promise.all(rollPromises);
+    PubSub.publish('roll:complete', { rollData });
   }
 
-  async initializeDiceBox() {
-    this.querySelectorAll('canvas').forEach(canvas => canvas.remove())
+  createPlayerDiceBox(peerId, playerData, numPlayers) {
+    return new Promise(async (resolve) => {
+      const isSingle = numPlayers === 1;
+      const peer = network.getPeer(peerId);
+      const settings = peer?.diceSettings || {};
 
-    this.diceBox = new DiceBox('#dice-box-container', this.buildConfig())
-    await this.diceBox.initialize().catch(err => {
-      console.error('DiceBox initialization failed:', err)
-    })
+      const container = document.createElement('div');
+      container.id = `dice-box-${peerId}`;
+      container.className = isSingle
+        ? 'player-dice-box relative bg-black/20 rounded-xl overflow-hidden h-[350px] lg:h-[450px]'
+        : 'player-dice-box relative bg-black/20 rounded-lg overflow-hidden min-h-[120px] sm:min-h-[160px]';
+
+      const label = document.createElement('div');
+      label.className = 'absolute top-2 left-2 z-10 px-2 py-1 rounded text-sm font-bold backdrop-blur-sm';
+      label.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+      label.style.color = playerData.color;
+      label.style.borderLeft = `3px solid ${playerData.color}`;
+      label.style.paddingLeft = '0.5rem';
+      label.textContent = playerData.playerName;
+
+      container.appendChild(label);
+      this.appendChild(container);
+
+      const diceBox = new DiceBox(`#dice-box-${peerId}`, {
+        assetPath: './',
+        theme_customColorset: {
+          background: playerData.color,
+          foreground: settings.labelColor || '#ffffff',
+          outline: '#000000',
+          texture: settings.texture || '',
+          material: settings.material || 'plastic',
+        },
+        light_intensity: 1,
+        gravity_multiplier: isSingle ? SINGLE_GRAVITY : GROUP_GRAVITY,
+        baseScale: this.calculateScale(numPlayers),
+        theme_surface: 'green-felt',
+        strength: isSingle ? SINGLE_STRENGTH : GROUP_STRENGTH,
+        shadows: false,
+        sounds: isSingle,
+        onRollComplete: () => resolve(),
+      });
+
+      this.diceBoxInstances.push(diceBox);
+
+      try {
+        await diceBox.initialize();
+        const notation = this.buildNotation(playerData.results);
+        await diceBox.roll(notation);
+      } catch (err) {
+        console.error(`Dice roll error for ${playerData.playerName}:`, err);
+        resolve(); // Resolve anyway to not block other rolls
+      }
+    });
   }
 
-  async updateConfig(config, color) {
-    const oldConfig = { ...this.currentConfig }
-    this.currentConfig = { ...this.currentConfig, ...config, color }
-
-    const configChanged =
-      oldConfig.color !== this.currentConfig.color ||
-      oldConfig.labelColor !== this.currentConfig.labelColor ||
-      oldConfig.texture !== this.currentConfig.texture ||
-      oldConfig.material !== this.currentConfig.material
-
-    if (!configChanged) return
-
-    await this.initializeDiceBox()
+  buildNotation(results) {
+    const diceTypes = results.map((r) => `1d${r.sides}`).join('+');
+    const values = results.map((r) => r.value).join(',');
+    return `${diceTypes}@${values}`;
   }
 
-  async roll(rollData, color, settings = {}) {
-    if (!this.diceBox) return
+  calculateScale(numPlayers) {
+    const isMobile = window.innerWidth < 768;
+    if (numPlayers === 1) return isMobile ? 55 : 85;
+    if (numPlayers === 2) return isMobile ? 35 : 55;
+    if (numPlayers <= 4) return isMobile ? 28 : 45;
+    return isMobile ? 22 : 35;
+  }
 
-    const newSettings = {
-      texture: settings.texture || this.currentConfig.texture,
-      material: settings.material || this.currentConfig.material,
-      labelColor: settings.labelColor || this.currentConfig.labelColor
-    }
+  getGridClass(numPlayers) {
+    if (numPlayers === 1) return 'grid grid-cols-1';
+    if (numPlayers === 2) return 'grid grid-cols-2 gap-1';
+    if (numPlayers <= 4) return 'grid grid-cols-2 gap-1';
+    if (numPlayers <= 6) return 'grid grid-cols-3 gap-1';
+    return 'grid grid-cols-3 gap-1';
+  }
 
-    const visualChanged =
-      this.currentConfig.color !== color ||
-      this.currentConfig.texture !== newSettings.texture ||
-      this.currentConfig.material !== newSettings.material ||
-      this.currentConfig.labelColor !== newSettings.labelColor
-
-    if (visualChanged) {
-      this.currentConfig = { ...this.currentConfig, ...newSettings, color }
-      await this.initializeDiceBox()
-    }
-
-    const diceTypes = rollData.results.map(r => `1d${r.sides}`).join('+')
-    const values = rollData.results.map(r => r.value).join(',')
-    const notation = `${diceTypes}@${values}`
-
-    console.log('Rolling:', notation, 'color:', color)
-
-    try {
-      await this.diceBox.roll(notation)
-    } catch (err) {
-      console.error('3D dice roll error:', err, rollData)
-    }
+  cleanup() {
+    this.diceBoxInstances.forEach((instance) => {
+      try {
+        if (instance.destroy) instance.destroy();
+      } catch (err) {
+        console.warn('Error cleaning up dice box instance:', err);
+      }
+    });
+    this.diceBoxInstances = [];
   }
 }
 
-customElements.define('dice-box', DiceBoxComponent)
+customElements.define('dice-box', DiceBoxComponent);

@@ -1,7 +1,7 @@
 {
   "name": "steel-sorcery-diceroom",
   "version": "1.0.0",
-  "description": "Serverless multiplayer dice rolling app built with Trystero",
+  "description": "Serverless multiplayer dice rolling app",
   "type": "module",
   "author": {
     "name": "Francis Hage",
@@ -10,7 +10,8 @@
   "license": "MIT",
   "dependencies": {
     "@3d-dice/dice-box-threejs": "^0.0.6",
-    "@supabase/supabase-js": "^2.80.0"
+    "@supabase/supabase-js": "^2.80.0",
+    "pubsub-js": "^1.9.5"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.5",
@@ -18,13 +19,16 @@
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@rollup/plugin-replace": "^6.0.2",
     "@rollup/plugin-terser": "^0.4.4",
+    "concurrently": "^9.1.2",
     "prettier": "^3.6.2",
     "rollup": "^4.49.0",
     "serve": "^14.2.4"
   },
   "scripts": {
     "build": "rollup -c && cp index.html docs/index.html && cp -r assets/dice-box-assets/* docs/ && cp -r assets/*.otf docs/assets/ && cp -r assets/images docs/assets/",
-    "dev": "npx serve docs -p 3000",
+    "dev": "npm run build && concurrently -n rollup,serve -c blue,green \"rollup -c -w\" \"serve docs -p 3000\"",
+    "serve": "serve docs -p 3000",
+    "watch": "rollup -c -w",
     "format": "biome format --write . && prettier --write '**/*.html'",
     "format:js": "biome format --write .",
     "format:html": "prettier --write '**/*.html'",
